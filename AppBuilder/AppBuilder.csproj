@@ -39,6 +39,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Clr\ClrClass.cs" />
+    <Compile Include="Clr\ClrProperty.cs" />
+    <Compile Include="Clr\ClrType.cs" />
     <Compile Include="Db\DbColumn.cs" />
     <Compile Include="Db\DbColumnType.cs" />
     <Compile Include="Db\DbTable.cs" />
