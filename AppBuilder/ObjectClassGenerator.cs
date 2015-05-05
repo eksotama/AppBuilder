@@ -4,13 +4,13 @@ using AppBuilder.Clr;
 
 namespace AppBuilder
 {
-	public static class ClassGenerator
+	public static class ObjectClassGenerator
 	{
-		public static string GenerateObjectClass(ClrClass @class, bool readOnly)
+		public static string Generate(ClrClass @class, bool readOnly)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 
-			var buffer = new StringBuilder(1024);
+			var buffer = new StringBuilder(1024 * 2);
 
 			AppendClass(buffer, @class);
 			buffer.AppendLine(@"{");
