@@ -64,7 +64,7 @@ namespace AppBuilder
 			buffer.Append(@"public ");
 			buffer.Append(GetPropertyType(property));
 			buffer.Append(@" ");
-			buffer.Append(property.Name);
+			buffer.Append(GetPropertyName(property));
 		}
 
 		private static void AppendContructor(StringBuilder buffer, ClrClass @class, bool readOnly)
@@ -142,7 +142,7 @@ namespace AppBuilder
 			foreach (var property in @class.Properties)
 			{
 				buffer.Append(@"this.");
-				buffer.Append(property.Name);
+				buffer.Append(GetPropertyName(property));
 				buffer.Append(@" = ");
 				AppendParameterName(buffer, property);
 				buffer.AppendLine(@";");
@@ -157,7 +157,7 @@ namespace AppBuilder
 				if (defaultValue != string.Empty)
 				{
 					buffer.Append(@"this.");
-					buffer.Append(property.Name);
+					buffer.Append(GetPropertyName(property));
 					buffer.Append(@" = ");
 					buffer.Append(defaultValue);
 					buffer.AppendLine(@";");
@@ -220,6 +220,19 @@ namespace AppBuilder
 				return @"byte[]";
 			}
 			return type.Name;
+		}
+
+		private static string GetPropertyName(ClrProperty property)
+		{
+			var type = property.Type;
+			var propertyName = property.Name;
+			if (type == ClrType.Integer || type == ClrType.Decimal || type == ClrType.DateTime || type == ClrType.String || type == ClrType.Bytes)
+			{
+				return propertyName;
+			}
+
+			// Property to other object. Remove ...Id to obtain object property name
+			return propertyName.Substring(0, propertyName.Length - @"Id".Length);
 		}
 	}
 }

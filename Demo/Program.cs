@@ -20,6 +20,20 @@ namespace Demo
 				[local_description] char(100) NOT NULL
 			)";
 
+			input = @"
+
+CREATE TABLE [Channels] (
+	[channel_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+	[description] char(100) NOT NULL, 
+	[local_description] char(100) NOT NULL, 
+	[sap_channel_id] char(10) NOT NULL,
+	[channel_group_id] integer,  
+	FOREIGN KEY ([channel_group_id])
+		REFERENCES [ChannelGroups] ([channel_group_id])
+		ON UPDATE NO ACTION ON DELETE NO ACTION
+)";
+
+
 			foreach (var table in DbSchemaParser.ParseTables(input))
 			{
 				Console.WriteLine(table.Name);

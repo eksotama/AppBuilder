@@ -86,8 +86,8 @@ namespace AppBuilder.Db
 		{
 			var value = StringUtils.ExtractBetween(input, @"REFERENCES ", @")");
 			var index = value.IndexOf('(');
-			var destinationTable = value.Substring(0, index);
-			var destinationColumn = value.Substring(index + 1);
+			var destinationTable = value.Substring(0, index).Trim();
+			var destinationColumn = value.Substring(index + 1).Trim();
 			return new DbForeignKey(destinationTable, destinationColumn);
 		}
 
