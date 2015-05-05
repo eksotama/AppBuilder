@@ -13,20 +13,32 @@ namespace Demo
 		static void Main(string[] args)
 		{
 			var input = @"
-CREATE TABLE [Brands] (
+			CREATE TABLE [Brands] (
 				[brand_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
 				[description] char(100) NOT NULL, 
 				[local_description] char(100) NOT NULL
 			)";
 
-			foreach (var t in DbSchemaParser.ParseTables(input))
+			foreach (var table in DbSchemaParser.ParseTables(input))
 			{
-				Console.WriteLine(t.Name);
-				Console.WriteLine(t.Columns.Length);
+				Console.WriteLine(table.Name);
+				Console.WriteLine(table.Columns.Length);
 				Console.WriteLine();
-				foreach (var c in t.Columns)
+				foreach (var c in table.Columns)
 				{
 					Console.WriteLine(c.Name + ", " + c.Type);
+				}
+
+				var obj = DbTableConverter.ToClrObject(table, new NameProvider());
+				Console.WriteLine(obj.Name);
+				Console.WriteLine(obj.Properties.Length);
+
+				foreach (var p in obj.Properties)
+				{
+					Console.WriteLine(p.Name);
+					Console.WriteLine(p.Type.Name);
+					Console.WriteLine(p.Nullable);
+					Console.WriteLine();
 				}
 			}
 		}
