@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,7 +30,8 @@ namespace Demo
 					Console.WriteLine(c.Name + ", " + c.Type);
 				}
 
-				var obj = DbTableConverter.ToClrObject(table, new NameProvider());
+				var nameProvider = new NameProvider();
+				var obj = DbTableConverter.ToClrObject(table, nameProvider);
 				Console.WriteLine(obj.Name);
 				Console.WriteLine(obj.Properties.Length);
 
@@ -40,6 +42,15 @@ namespace Demo
 					Console.WriteLine(p.Nullable);
 					Console.WriteLine();
 				}
+
+				var mut = ClassGenerator.GenerateObjectClass(obj, false);
+				Console.WriteLine(mut);
+
+				var immut = ClassGenerator.GenerateObjectClass(obj, true);
+				Console.WriteLine(immut);
+
+				var total = mut + Environment.NewLine + immut;
+				File.WriteAllText(@"C:\temp\obj.cs", total);
 			}
 		}
 	}

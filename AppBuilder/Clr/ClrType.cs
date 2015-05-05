@@ -6,8 +6,8 @@ namespace AppBuilder.Clr
 	{
 		public static readonly ClrType Integer = new ClrType(@"Integer");
 		public static readonly ClrType Decimal = new ClrType(@"Decimal");
-		public static readonly ClrType String = new ClrType(@"String");
 		public static readonly ClrType DateTime = new ClrType(@"DateTime");
+		public static readonly ClrType String = new ClrType(@"String");
 		public static readonly ClrType Bytes = new ClrType(@"Bytes");
 
 		public string Name { get; private set; }
