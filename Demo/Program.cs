@@ -12,69 +12,100 @@ namespace Demo
 {
 	class Program
 	{
-		public sealed class ChannelGroup
-		{
-			public long ChannelGroupId { get; set; }
-			public string Description { get; set; }
-			public string LocalDescription { get; set; }
+		//public sealed class Brand
+		//{
+		//	public long BrandId { get; set; }
+		//	public string Description { get; set; }
+		//	public string LocalDescription { get; set; }
 
-			public ChannelGroup()
-			{
-				this.ChannelGroupId = 0L;
-				this.Description = string.Empty;
-				this.LocalDescription = string.Empty;
-			}
-		}
+		//	public Brand()
+		//	{
+		//		this.BrandId = 0L;
+		//		this.Description = string.Empty;
+		//		this.LocalDescription = string.Empty;
+		//	}
+		//}
 
-		public sealed class Channel
+		public sealed class Brand
 		{
-			public long ChannelId { get; private set; }
+			public long BrandId { get; private set; }
 			public string Description { get; private set; }
 			public string LocalDescription { get; private set; }
-			public string SapChannelId { get; private set; }
-			public ChannelGroup ChannelGroup { get; private set; }
 
-			public Channel(long channelId, string description, string localDescription, string sapChannelId, ChannelGroup channelGroup)
+			public Brand(long brandId, string description, string localDescription)
 			{
 				if (description == null) throw new ArgumentNullException("description");
 				if (localDescription == null) throw new ArgumentNullException("localDescription");
-				if (sapChannelId == null) throw new ArgumentNullException("sapChannelId");
-				if (channelGroup == null) throw new ArgumentNullException("channelGroup");
 
-				this.ChannelId = channelId;
+				this.BrandId = brandId;
 				this.Description = description;
 				this.LocalDescription = localDescription;
-				this.SapChannelId = sapChannelId;
-				this.ChannelGroup = channelGroup;
 			}
 		}
 
+		//public sealed class Channel
+		//{
+		//	public long ChannelId { get; set; }
+		//	public string Description { get; set; }
+		//	public string LocalDescription { get; set; }
+		//	public string SapChannelId { get; set; }
+		//	public ChannelGroup ChannelGroup { get; set; }
 
-		public sealed class ChannelAdapter : AdapterBase
+		//	public Channel()
+		//	{
+		//		this.ChannelId = 0L;
+		//		this.Description = string.Empty;
+		//		this.LocalDescription = string.Empty;
+		//		this.SapChannelId = string.Empty;
+		//		this.ChannelGroup = default(ChannelGroup);
+		//	}
+		//}
+
+
+
+		//public sealed class Channel
+		//{
+		//	public long ChannelId { get; private set; }
+		//	public string Description { get; private set; }
+		//	public string LocalDescription { get; private set; }
+		//	public string SapChannelId { get; private set; }
+		//	public ChannelGroup ChannelGroup { get; private set; }
+
+		//	public Channel(long channelId, string description, string localDescription, string sapChannelId, ChannelGroup channelGroup)
+		//	{
+		//		if (description == null) throw new ArgumentNullException("description");
+		//		if (localDescription == null) throw new ArgumentNullException("localDescription");
+		//		if (sapChannelId == null) throw new ArgumentNullException("sapChannelId");
+		//		if (channelGroup == null) throw new ArgumentNullException("channelGroup");
+
+		//		this.ChannelId = channelId;
+		//		this.Description = description;
+		//		this.LocalDescription = localDescription;
+		//		this.SapChannelId = sapChannelId;
+		//		this.ChannelGroup = channelGroup;
+		//	}
+		//}
+
+		public sealed class BrandAdapter : AdapterBase
 		{
-			private readonly Dictionary<long, ChannelGroup> _channelGroups;
-
-			public ChannelAdapter(QueryHelper queryHelper, Dictionary<long, ChannelGroup> channelGroups)
+			public BrandAdapter(QueryHelper queryHelper)
 				: base(queryHelper)
 			{
-				if (channelGroups == null) throw new ArgumentNullException("channelGroups");
-				_channelGroups = channelGroups;
 			}
 
-			public void Fill(List<Channel> items)
+			public void Fill(List<Brand> items)
 			{
 				if (items == null) throw new ArgumentNullException("items");
-
-				var query = "SELECT channel_id, description, local_description, sap_channel_id, channel_group_id FROM Channels";
+				var query = "SELECT brand_id, description, local_description FROM Brands";
 				this.QueryHelper.Fill(items, query, this.Creator);
 			}
 
-			private Channel Creator(IDataReader r)
+			private Brand Creator(IDataReader r)
 			{
-				var channelId = 0L;
+				var brandId = 0L;
 				if (!r.IsDBNull(0))
 				{
-					channelId = r.GetInt64(0);
+					brandId = r.GetInt64(0);
 				}
 				var description = string.Empty;
 				if (!r.IsDBNull(1))
@@ -86,21 +117,10 @@ namespace Demo
 				{
 					localDescription = r.GetString(2);
 				}
-				var sapChannelId = string.Empty;
-				if (!r.IsDBNull(3))
-				{
-					sapChannelId = r.GetString(3);
-				}
-				var channelGroup = default(ChannelGroup);
-				if (!r.IsDBNull(4))
-				{
-					channelGroup = _channelGroups[r.GetInt64(4)];
-				}
-				return new Channel(channelId, description, localDescription, sapChannelId, channelGroup);
+				return new Brand(brandId, description, localDescription);
 			}
 
 		}
-
 
 		static void Main(string[] args)
 		{
@@ -111,25 +131,25 @@ namespace Demo
 				[local_description] char(100) NOT NULL
 			)";
 
-			input = @"
-			CREATE TABLE [ChannelGroups] (
-				[channel_group_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
-				[description] char(100) NOT NULL, 
-				[local_description] char(100) NOT NULL
-			)";
+			//			input = @"
+			//			CREATE TABLE [ChannelGroups] (
+			//				[channel_group_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+			//				[description] char(100) NOT NULL, 
+			//				[local_description] char(100) NOT NULL
+			//			)";
 
-			input = @"
-			
-			CREATE TABLE [Channels] (
-				[channel_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
-				[description] char(100) NOT NULL, 
-				[local_description] char(100) NOT NULL, 
-				[sap_channel_id] char(10) NOT NULL,
-				[channel_group_id] integer,  
-				FOREIGN KEY ([channel_group_id])
-					REFERENCES [ChannelGroups] ([channel_group_id])
-					ON UPDATE NO ACTION ON DELETE NO ACTION
-			)";
+			//			input = @"
+			//			
+			//			CREATE TABLE [Channels] (
+			//				[channel_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+			//				[description] char(100) NOT NULL, 
+			//				[local_description] char(100) NOT NULL, 
+			//				[sap_channel_id] char(10) NOT NULL,
+			//				[channel_group_id] integer,  
+			//				FOREIGN KEY ([channel_group_id])
+			//					REFERENCES [ChannelGroups] ([channel_group_id])
+			//					ON UPDATE NO ACTION ON DELETE NO ACTION
+			//			)";
 
 
 			foreach (var table in DbSchemaParser.ParseTables(input))

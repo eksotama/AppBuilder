@@ -30,7 +30,7 @@ namespace AppBuilder
 
 		private static ClrProperty GetClrProperty(DbColumn column, NameProvider nameProvider)
 		{
-			var name = nameProvider.GetPropertyName(column.Name);
+			var name = nameProvider.GetPropertyName(column);
 			var type = GetClrType(column, nameProvider);
 			return new ClrProperty(name, type, column.AllowNull, column);
 		}

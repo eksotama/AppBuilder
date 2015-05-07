@@ -8,44 +8,6 @@ using AppBuilder.Db;
 
 namespace AppBuilder
 {
-	public sealed class Brand
-	{
-		public long BrandId { get; set; }
-		public string Description { get; set; }
-		public string LocalDescription { get; set; }
-
-		public Brand()
-		{
-			this.BrandId = 0L;
-			this.Description = string.Empty;
-			this.LocalDescription = string.Empty;
-		}
-	}
-
-
-
-	//public sealed class Brand
-	//{
-	//	public long BrandId { get; private set; }
-	//	public string Description { get; private set; }
-	//	public string LocalDescription { get; private set; }
-
-	//	public Brand(long brandId, string description, string localDescription)
-	//	{
-	//		if (description == null) throw new ArgumentNullException("description");
-	//		if (localDescription == null) throw new ArgumentNullException("localDescription");
-
-	//		this.BrandId = brandId;
-	//		this.Description = description;
-	//		this.LocalDescription = localDescription;
-	//	}
-	//}
-
-
-
-
-
-
 	public static class AdapterClassGenerator
 	{
 		public static string Generate(ClrClass @class, bool readOnly, AdapterResultType resultType)
@@ -167,14 +129,14 @@ namespace AppBuilder
 				var property = properties[index];
 
 				buffer.Append(@"var ");
-				ClrProperty.AppendParameterName(buffer, property);
+				buffer.Append(property.ParameterName);
 				buffer.Append(@" = ");
-				ClrProperty.AppendDefaultValue(buffer, property);
+				buffer.Append(property.DefaultValue);
 				buffer.AppendLine(@";");
 				buffer.Append(@"if (!r.IsDBNull(");
 				buffer.Append(index);
 				buffer.AppendLine(@")){");
-				ClrProperty.AppendParameterName(buffer, property);
+				buffer.Append(property.ParameterName);
 				buffer.Append(@" = ");
 				ClrProperty.AppendDataReaderValue(buffer, property, index);
 				buffer.AppendLine(@";}");
@@ -185,7 +147,7 @@ namespace AppBuilder
 			if (readOnly)
 			{
 				buffer.Append(@"(");
-				ClrClass.AppendParameters(buffer, @class);
+				ClrClass.AppendParameterNames(buffer, @class);
 				buffer.Append(@")");
 			}
 			else

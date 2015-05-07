@@ -29,10 +29,11 @@ namespace AppBuilder
 			return name.Substring(0, name.Length - 1);
 		}
 
-		public string GetPropertyName(string name)
+		public string GetPropertyName(DbColumn column)
 		{
-			if (name == null) throw new ArgumentNullException("name");
+			if (column == null) throw new ArgumentNullException("column");
 
+			var name = column.Name;
 			var buffer = new StringBuilder(name.Length);
 
 			//some_value_id => SomeValueId
@@ -55,6 +56,13 @@ namespace AppBuilder
 
 			// Upper first
 			buffer[0] = char.ToUpperInvariant(buffer[0]);
+
+			// SomeValueId => SomeValue
+			if (column.ForeignKey != null)
+			{
+				var length = @"Id".Length;
+				buffer.Remove(buffer.Length - length, length);
+			}
 
 			return buffer.ToString();
 		}

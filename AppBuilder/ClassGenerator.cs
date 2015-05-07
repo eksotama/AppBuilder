@@ -11,8 +11,9 @@ namespace AppBuilder
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (@class == null) throw new ArgumentNullException("class");
 
-			buffer.Append(@"public sealed class ");
-			buffer.Append(@class.Name);
+			AppendPublicModifier(buffer);
+			AppendSealedClass(buffer);
+			AppendClassName(buffer, @class);
 		}
 
 		public static void AppendContructorName(StringBuilder buffer, ClrClass @class)
@@ -20,7 +21,24 @@ namespace AppBuilder
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (@class == null) throw new ArgumentNullException("class");
 
+			AppendPublicModifier(buffer);
+			AppendClassName(buffer, @class);
+		}
+
+		public static void AppendPublicModifier(StringBuilder buffer)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+
 			buffer.Append(@"public ");
+		}
+
+		private static void AppendSealedClass(StringBuilder buffer)
+		{
+			buffer.Append(@"sealed class ");
+		}
+
+		private static void AppendClassName(StringBuilder buffer, ClrClass @class)
+		{
 			buffer.Append(@class.Name);
 		}
 	}

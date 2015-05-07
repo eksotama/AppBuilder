@@ -10,6 +10,10 @@ namespace AppBuilder.Clr
 		public ClrType Type { get; private set; }
 		public bool Nullable { get; private set; }
 		public DbColumn Column { get; private set; }
+		public string PropertyType { get; private set; }
+		public string DefaultValue { get; private set; }
+		public string ParameterName { get; private set; }
+		public bool IsReferenceType { get; private set; }
 
 		public ClrProperty(string name, ClrType type, bool nullable, DbColumn column)
 		{
@@ -22,133 +26,146 @@ namespace AppBuilder.Clr
 			this.Type = type;
 			this.Nullable = nullable;
 			this.Column = column;
-		}
 
-		public static bool IsReferenceType(ClrProperty property)
-		{
-			if (property == null) throw new ArgumentNullException("property");
-
-			var type = property.Type;
+			this.SetupPropertyType();
+			this.SetupDefaultValue();
+			this.ParameterName = char.ToLowerInvariant(name[0]) + name.Substring(1);
+			this.IsReferenceType = true;
 			if (type == ClrType.Integer || type == ClrType.Decimal || type == ClrType.DateTime)
 			{
-				return property.Nullable;
+				this.IsReferenceType = nullable;
 			}
-			return true;
 		}
 
-		public static void AppendPublicReadOnlyProperty(StringBuilder buffer, ClrProperty property)
+		private void SetupPropertyType()
 		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (property == null) throw new ArgumentNullException("property");
-
-			AppendPublicProperty(buffer, property);
-			buffer.AppendLine(@" { get; private set; }");
-		}
-
-		public static void AppendPublicMutableProperty(StringBuilder buffer, ClrProperty property)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (property == null) throw new ArgumentNullException("property");
-
-			AppendPublicProperty(buffer, property);
-			buffer.AppendLine(@" { get; set; }");
-		}
-
-		private static void AppendPublicProperty(StringBuilder buffer, ClrProperty property)
-		{
-			buffer.Append(@"public ");
-			AppendType(buffer, property);
-			AppendName(buffer, property);
-		}
-
-		public static void AppendType(StringBuilder buffer, ClrProperty property)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (property == null) throw new ArgumentNullException("property");
-
-			buffer.Append(GetPropertyType(property));
-			buffer.Append(@" ");
-		}
-
-		public static void AppendDefaultValue(StringBuilder buffer, ClrProperty property)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (property == null) throw new ArgumentNullException("property");
-
-			var type = property.Type;
+			var type = this.Type;
+			this.PropertyType = type.Name;
 			if (type == ClrType.Integer)
 			{
-				buffer.Append(property.Nullable ? @"null" : @"0L");
-				return;
-			}
-			if (type == ClrType.Decimal)
-			{
-				buffer.Append(property.Nullable ? @"null" : @"0M");
-				return;
-			}
-			if (type == ClrType.DateTime)
-			{
-				if (property.Name.EndsWith(@"From"))
-				{
-					buffer.Append(@"DateTime.MinValue");
-					return;
-				}
-				if (property.Name.EndsWith(@"To"))
-				{
-					buffer.Append(@"DateTime.MaxValue");
-					return;
-				}
-				buffer.Append(property.Nullable ? @"null" : @"DateTime.MinValue");
+				this.PropertyType = this.Nullable ? @"long?" : @"long";
 				return;
 			}
 			if (type == ClrType.String)
 			{
-				buffer.Append(@"string.Empty");
+				this.PropertyType = @"string";
+				return;
+			}
+			if (type == ClrType.Decimal)
+			{
+				this.PropertyType = this.Nullable ? @"decimal?" : @"decimal";
+				return;
+			}
+			if (type == ClrType.DateTime)
+			{
+				this.PropertyType = this.Nullable ? @"DateTime?" : @"DateTime";
 				return;
 			}
 			if (type == ClrType.Bytes)
 			{
-				buffer.Append(@"default(byte[])");
+				this.PropertyType = @"byte[]";
+			}
+		}
+
+		private void SetupDefaultValue()
+		{
+			if (this.Type == ClrType.Integer)
+			{
+				this.DefaultValue = this.Nullable ? @"null" : @"0L";
+				return;
+			}
+			if (this.Type == ClrType.String)
+			{
+				this.DefaultValue = @"string.Empty";
+				return;
+			}
+			if (this.Type == ClrType.Decimal)
+			{
+				this.DefaultValue = this.Nullable ? @"null" : @"0M";
+				return;
+			}
+			if (this.Type == ClrType.DateTime)
+			{
+				if (this.Name.EndsWith(@"From"))
+				{
+					this.DefaultValue = @"DateTime.MinValue";
+					return;
+				}
+				if (this.Name.EndsWith(@"To"))
+				{
+					this.DefaultValue = @"DateTime.MaxValue";
+					return;
+				}
+				this.DefaultValue = this.Nullable ? @"null" : @"DateTime.MinValue";
+				return;
+			}
+			if (this.Type == ClrType.Bytes)
+			{
+				this.DefaultValue = @"default(byte[])";
 				return;
 			}
 
-			buffer.Append(@"default(");
-			buffer.Append(type.Name);
-			buffer.Append(@")");
+			this.DefaultValue = @"default(" + this.Type.Name + @")";
 		}
 
-		public static void AppendName(StringBuilder buffer, ClrProperty property)
+		public static void AppendMutableProperty(StringBuilder buffer, ClrProperty property)
 		{
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (property == null) throw new ArgumentNullException("property");
 
-			var propertyName = property.Name;
-
-			var type = property.Type;
-			if (type.IsBuiltIn)
-			{
-				buffer.Append(propertyName);
-			}
-			else
-			{
-				AppendParameterNameForObject(buffer, propertyName);
-			}
+			AppendProperty(buffer, property, @" { get; set; }");
 		}
 
-		private static void AppendParameterNameForObject(StringBuilder buffer, string propertyName)
+		public static void AppendReadOnlyProperty(StringBuilder buffer, ClrProperty property)
 		{
-			// Property to other object. Remove ...Id to obtain object property name
-			var length = propertyName.Length - @"Id".Length;
-			for (var i = 0; i < length; i++)
-			{
-				buffer.Append(propertyName[i]);
-			}
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			AppendProperty(buffer, property, @" { get; private set; }");
 		}
 
-		private static void AppendNameForObjectParameter(StringBuilder buffer, string propertyName)
+		private static void AppendProperty(StringBuilder buffer, ClrProperty property, string accessModifier)
 		{
-			AppendParameterNameForObject(buffer, propertyName);
-			buffer[buffer.Length - (propertyName.Length - @"Id".Length)] = char.ToLowerInvariant(propertyName[0]);
+			buffer.Append(@"public ");
+			buffer.Append(property.PropertyType);
+			buffer.Append(@" ");
+			buffer.Append(property.Name);
+			buffer.Append(accessModifier);
+		}
+
+		public static void AppendInitToDefaultValue(StringBuilder buffer, ClrProperty property)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			AppendInitializationTo(buffer, property, property.DefaultValue);
+		}
+
+		public static void AppendInitToParameterName(StringBuilder buffer, ClrProperty property)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			AppendInitializationTo(buffer, property, property.ParameterName);
+		}
+
+		private static void AppendInitializationTo(StringBuilder buffer, ClrProperty property, string value)
+		{
+			buffer.Append(@"this.");
+			buffer.Append(property.Name);
+			buffer.Append(@" = ");
+			buffer.Append(value);
+			buffer.Append(@";");
+		}
+
+		public static void AppendParameter(StringBuilder buffer, ClrProperty property)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			buffer.Append(property.PropertyType);
+			buffer.Append(@" ");
+			buffer.Append(property.ParameterName);
 		}
 
 		public static void AppendParameterName(StringBuilder buffer, ClrProperty property)
@@ -156,52 +173,49 @@ namespace AppBuilder.Clr
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (property == null) throw new ArgumentNullException("property");
 
-			var propertyName = property.Name;
-
-			// Parameter name - Property name with lowered first letter
-			var type = property.Type;
-			if (type.IsBuiltIn)
-			{
-				AppendParameterName(buffer, propertyName);
-			}
-			else
-			{
-				AppendNameForObjectParameter(buffer, propertyName);
-			}
+			buffer.Append(property.ParameterName);
 		}
 
-		private static void AppendParameterName(StringBuilder buffer, string name)
+		public static void AppendPropertyNameParameterName(StringBuilder buffer, ClrProperty property)
 		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			buffer.Append(property.Name);
+			buffer.Append(@" = ");
+			buffer.Append(property.ParameterName);
+		}
+
+		public static void AppendParameterCheck(StringBuilder buffer, ClrProperty property)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			AppendParameterCheck(buffer, property.ParameterName);
+		}
+
+		public static void AppendParameterCheck(StringBuilder buffer, string name)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (name == null) throw new ArgumentNullException("name");
+
+			buffer.Append(@"if (");
 			buffer.Append(name);
-			buffer[buffer.Length - name.Length] = char.ToLowerInvariant(name[0]);
+			buffer.Append(@" == null ) throw new ArgumentNullException(""");
+			buffer.Append(name);
+			buffer.Append(@""");");
 		}
 
-		private static string GetPropertyType(ClrProperty property)
-		{
-			var type = property.Type;
-			if (type == ClrType.Integer)
-			{
-				return property.Nullable ? @"long?" : @"long";
-			}
-			if (type == ClrType.Decimal)
-			{
-				return property.Nullable ? @"decimal?" : @"decimal";
-			}
-			if (type == ClrType.DateTime)
-			{
-				return property.Nullable ? @"DateTime?" : @"DateTime";
-			}
-			if (type == ClrType.String)
-			{
-				return @"string";
-			}
-			if (type == ClrType.Bytes)
-			{
-				return @"byte[]";
-			}
-			return type.Name;
-		}
 
+
+
+
+
+
+
+		//
+		// TODO : !!!
+		//
 		public static void AppendDataReaderValue(StringBuilder buffer, ClrProperty property, int index)
 		{
 			if (buffer == null) throw new ArgumentNullException("buffer");
@@ -250,42 +264,6 @@ namespace AppBuilder.Clr
 			}
 		}
 
-		public static void AppendParameterCheck(StringBuilder buffer, ClrProperty property)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (property == null) throw new ArgumentNullException("property");
-
-			var propertyName = property.Name;
-
-			// Parameter name - Property name with lowered first letter
-			var type = property.Type;
-			if (type.IsBuiltIn)
-			{
-				AppendParameterCheck(buffer, property.Name);
-			}
-			else
-			{
-				AppendParameterCheck(buffer, propertyName, AppendNameForObjectParameter);
-			}
-		}
-
-		public static void AppendParameterCheck(StringBuilder buffer, string name)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (name == null) throw new ArgumentNullException("name");
-
-			AppendParameterCheck(buffer, name, AppendParameterName);
-		}
-
-		private static void AppendParameterCheck(StringBuilder buffer, string name, Action<StringBuilder, string> appender)
-		{
-			buffer.Append(@"if (");
-			appender(buffer, name);
-			buffer.Append(@" == null ) throw new ArgumentNullException(""");
-			appender(buffer, name);
-			buffer.AppendLine(@""");");
-		}
-
 		public static void AppendDictionaryField(StringBuilder buffer, ClrProperty property)
 		{
 			if (buffer == null) throw new ArgumentNullException("buffer");
@@ -293,7 +271,8 @@ namespace AppBuilder.Clr
 
 			buffer.Append(@"private readonly ");
 			buffer.Append(@"Dictionary<long,");
-			buffer.Append(GetPropertyType(property));
+			throw new Exception(@"currently refactoring");
+			//buffer.Append(GetPropertyType(property));
 			buffer.Append(@"> _");
 			var value = property.Column.ForeignKey.Table;
 			buffer.Append(value);
@@ -308,7 +287,8 @@ namespace AppBuilder.Clr
 
 			buffer.Append(@", ");
 			buffer.Append(@"Dictionary<long,");
-			buffer.Append(GetPropertyType(property));
+			//buffer.Append(GetPropertyType(property));
+			throw new Exception(@"currently refactoring");
 			buffer.Append(@"> ");
 			var value = property.Column.ForeignKey.Table;
 			buffer.Append(value);
