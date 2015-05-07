@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text;
 using AppBuilder.Clr;
 using AppBuilder.Db;
@@ -72,11 +73,53 @@ namespace AppBuilder
 
 		private static void AppendConstructor(StringBuilder buffer, ClrClass @class)
 		{
-			// TODO : !!! For adapters with classes with other object we need Dictionaries eagerly load objects 
-			// and assigned to fields of the appropriate type
+			var hasObjectProperties = @class.Properties.Any(p => p.Column.ForeignKey != null);
+			if (hasObjectProperties)
+			{
+				foreach (var property in @class.Properties)
+				{
+					if (property.Column.ForeignKey != null)
+					{
+						ClrProperty.AppendDictionaryField(buffer, property);
+					}
+				}
+				buffer.AppendLine();
+			}
 			buffer.Append(@"public ");
 			buffer.Append(@class.Name);
-			buffer.AppendLine(@"Adapter(QueryHelper queryHelper) : base(queryHelper) { } ");
+			buffer.Append(@"Adapter(QueryHelper queryHelper");
+			if (hasObjectProperties)
+			{
+				foreach (var property in @class.Properties)
+				{
+					if (property.Column.ForeignKey != null)
+					{
+						ClrProperty.AppendDictionaryParameter(buffer, property);
+					}
+				}
+			}
+			buffer.AppendLine(@") : base(queryHelper)");
+			buffer.AppendLine(@"{");
+			if (hasObjectProperties)
+			{
+				foreach (var property in @class.Properties)
+				{
+					var foreignKey = property.Column.ForeignKey;
+					if (foreignKey != null)
+					{
+						ClrProperty.AppendParameterCheck(buffer, foreignKey.Table);
+					}
+				}
+				foreach (var property in @class.Properties)
+				{
+					var foreignKey = property.Column.ForeignKey;
+					if (foreignKey != null)
+					{
+						ClrProperty.AppendFieldAssignment(buffer, property);
+					}
+				}
+			}
+			buffer.AppendLine(@"}");
 			buffer.AppendLine();
 		}
 

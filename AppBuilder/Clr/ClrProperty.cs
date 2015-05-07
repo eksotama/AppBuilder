@@ -131,12 +131,24 @@ namespace AppBuilder.Clr
 			}
 			else
 			{
-				// Property to other object. Remove ...Id to obtain object property name	
-				for (var i = 0; i < propertyName.Length - @"Id".Length; i++)
-				{
-					buffer.Append(propertyName[i]);
-				}
+				AppendParameterNameForObject(buffer, propertyName);
 			}
+		}
+
+		private static void AppendParameterNameForObject(StringBuilder buffer, string propertyName)
+		{
+			// Property to other object. Remove ...Id to obtain object property name
+			var length = propertyName.Length - @"Id".Length;
+			for (var i = 0; i < length; i++)
+			{
+				buffer.Append(propertyName[i]);
+			}
+		}
+
+		private static void AppendNameForObjectParameter(StringBuilder buffer, string propertyName)
+		{
+			AppendParameterNameForObject(buffer, propertyName);
+			buffer[buffer.Length - (propertyName.Length - @"Id".Length)] = char.ToLowerInvariant(propertyName[0]);
 		}
 
 		public static void AppendParameterName(StringBuilder buffer, ClrProperty property)
@@ -144,8 +156,18 @@ namespace AppBuilder.Clr
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (property == null) throw new ArgumentNullException("property");
 
+			var propertyName = property.Name;
+
 			// Parameter name - Property name with lowered first letter
-			AppendParameterName(buffer, property.Name);
+			var type = property.Type;
+			if (type.IsBuiltIn)
+			{
+				AppendParameterName(buffer, propertyName);
+			}
+			else
+			{
+				AppendNameForObjectParameter(buffer, propertyName);
+			}
 		}
 
 		private static void AppendParameterName(StringBuilder buffer, string name)
@@ -215,10 +237,16 @@ namespace AppBuilder.Clr
 			}
 			else
 			{
-				throw new Exception(@"TODO : Handle the read of the value and search in the respective dictionary");
-				//buffer.Append(@"default(");
-				//buffer.Append(type.Name);
-				//buffer.Append(@")");
+				buffer.Append(@"_");
+				var table = property.Column.ForeignKey.Table;
+				foreach (var symbol in table)
+				{
+					buffer.Append(symbol);
+				}
+				buffer[buffer.Length - table.Length] = char.ToLowerInvariant(table[0]);
+				buffer.Append(@"[r.GetInt64(");
+				buffer.Append(index);
+				buffer.Append(@")]");
 			}
 		}
 
@@ -227,7 +255,18 @@ namespace AppBuilder.Clr
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (property == null) throw new ArgumentNullException("property");
 
-			AppendParameterCheck(buffer, property.Name);
+			var propertyName = property.Name;
+
+			// Parameter name - Property name with lowered first letter
+			var type = property.Type;
+			if (type.IsBuiltIn)
+			{
+				AppendParameterCheck(buffer, property.Name);
+			}
+			else
+			{
+				AppendParameterCheck(buffer, propertyName, AppendNameForObjectParameter);
+			}
 		}
 
 		public static void AppendParameterCheck(StringBuilder buffer, string name)
@@ -235,11 +274,60 @@ namespace AppBuilder.Clr
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (name == null) throw new ArgumentNullException("name");
 
+			AppendParameterCheck(buffer, name, AppendParameterName);
+		}
+
+		private static void AppendParameterCheck(StringBuilder buffer, string name, Action<StringBuilder, string> appender)
+		{
 			buffer.Append(@"if (");
-			AppendParameterName(buffer, name);
+			appender(buffer, name);
 			buffer.Append(@" == null ) throw new ArgumentNullException(""");
-			AppendParameterName(buffer, name);
+			appender(buffer, name);
 			buffer.AppendLine(@""");");
+		}
+
+		public static void AppendDictionaryField(StringBuilder buffer, ClrProperty property)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			buffer.Append(@"private readonly ");
+			buffer.Append(@"Dictionary<long,");
+			buffer.Append(GetPropertyType(property));
+			buffer.Append(@"> _");
+			var value = property.Column.ForeignKey.Table;
+			buffer.Append(value);
+			buffer[buffer.Length - value.Length] = char.ToLowerInvariant(value[0]);
+			buffer.AppendLine(@";");
+		}
+
+		public static void AppendDictionaryParameter(StringBuilder buffer, ClrProperty property)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			buffer.Append(@", ");
+			buffer.Append(@"Dictionary<long,");
+			buffer.Append(GetPropertyType(property));
+			buffer.Append(@"> ");
+			var value = property.Column.ForeignKey.Table;
+			buffer.Append(value);
+			buffer[buffer.Length - value.Length] = char.ToLowerInvariant(value[0]);
+		}
+
+		public static void AppendFieldAssignment(StringBuilder buffer, ClrProperty property)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (property == null) throw new ArgumentNullException("property");
+
+			buffer.Append(@"_");
+			var value = property.Column.ForeignKey.Table;
+			buffer.Append(value);
+			buffer[buffer.Length - value.Length] = char.ToLowerInvariant(value[0]);
+			buffer.Append(@" = ");
+			buffer.Append(value);
+			buffer[buffer.Length - value.Length] = char.ToLowerInvariant(value[0]);
+			buffer.AppendLine(@";");
 		}
 	}
 }
