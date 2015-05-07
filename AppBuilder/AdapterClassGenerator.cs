@@ -3,38 +3,47 @@ using System.Collections.Generic;
 using System.Data;
 using System.Text;
 using AppBuilder.Clr;
+using AppBuilder.Db;
 
 namespace AppBuilder
 {
+	public sealed class Brand
+	{
+		public long BrandId { get; set; }
+		public string Description { get; set; }
+		public string LocalDescription { get; set; }
+
+		public Brand()
+		{
+			this.BrandId = 0L;
+			this.Description = string.Empty;
+			this.LocalDescription = string.Empty;
+		}
+	}
+
+
+
 	//public sealed class Brand
 	//{
-	//	public long BrandId { get; set; }
-	//	public string Description { get; set; }
-	//	public string LocalDescription { get; set; }
+	//	public long BrandId { get; private set; }
+	//	public string Description { get; private set; }
+	//	public string LocalDescription { get; private set; }
 
-	//	public Brand()
+	//	public Brand(long brandId, string description, string localDescription)
 	//	{
-	//		this.Description = string.Empty;
-	//		this.LocalDescription = string.Empty;
+	//		if (description == null) throw new ArgumentNullException("description");
+	//		if (localDescription == null) throw new ArgumentNullException("localDescription");
+
+	//		this.BrandId = brandId;
+	//		this.Description = description;
+	//		this.LocalDescription = localDescription;
 	//	}
 	//}
 
-	public sealed class Brand
-	{
-		public long BrandId { get; private set; }
-		public string Description { get; private set; }
-		public string LocalDescription { get; private set; }
 
-		public Brand(long brandId, string description, string localDescription)
-		{
-			if (description == null) throw new ArgumentNullException("description");
-			if (localDescription == null) throw new ArgumentNullException("localDescription");
 
-			this.BrandId = brandId;
-			this.Description = description;
-			this.LocalDescription = localDescription;
-		}
-	}
+
+
 
 	public static class AdapterClassGenerator
 	{
@@ -44,57 +53,27 @@ namespace AppBuilder
 
 			var buffer = new StringBuilder(2 * 1024);
 
-			buffer.Append(@"public sealed class ");
-			buffer.Append(@class.Name);
-			buffer.AppendLine(@"Adapter : AdapterBase");
+			AppendClassDefinition(buffer, @class);
 			buffer.AppendLine(@"{");
-
 			AppendConstructor(buffer, @class);
 			AppendGetAllMethod(buffer, @class, resultType);
 			AppendCreatorMethod(buffer, @class, readOnly);
-			//if (resultType == AdapterResultType.Dictionary)
-			{
-				AppendSelectorMethod(buffer, @class);
-			}
-
+			AppendSelectorMethod(buffer, @class, resultType);
 			buffer.AppendLine(@"}");
-
-			//public List<Zone> GetAll()
-			//{
-			//	var query = @"
-			//	SELECT ZONE_ID    ,
-			//		   DESCRIPTION,
-			//		   LOCAL_DESCRIPTION
-			//	FROM   ZONES
-			//	ORDER BY LOCAL_DESCRIPTION";
-
-			//	return this.QueryHelper.ExecuteReader(query, this.ZoneCreator, 24);
-			//}
-
-			//private Zone ZoneCreator(IDataReader r)
-			//{
-			//	var id = r.GetInt32(0);
-			//	var description = string.Empty;
-			//	if (!r.IsDBNull(1))
-			//	{
-			//		description = r.GetString(1).Trim(TrimSymbols);
-			//	}
-			//	var localDescription = string.Empty;
-			//	if (!r.IsDBNull(2))
-			//	{
-			//		localDescription = r.GetString(2).Trim(TrimSymbols);
-			//	}
-
-
-			//	return new Zone(id, this.GetLocal(localDescription, description));
-			//}
 
 			return buffer.ToString();
 		}
 
+		private static void AppendClassDefinition(StringBuilder buffer, ClrClass @class)
+		{
+			ClassGenerator.AppendClassDefinition(buffer, @class);
+			buffer.AppendLine(@"Adapter : AdapterBase");
+		}
+
 		private static void AppendConstructor(StringBuilder buffer, ClrClass @class)
 		{
-			// TODO : !!! For adapters with classes with other object we need Dictionaries eagerly load objects
+			// TODO : !!! For adapters with classes with other object we need Dictionaries eagerly load objects 
+			// and assigned to fields of the appropriate type
 			buffer.Append(@"public ");
 			buffer.Append(@class.Name);
 			buffer.AppendLine(@"Adapter(QueryHelper queryHelper) : base(queryHelper) { } ");
@@ -103,168 +82,107 @@ namespace AppBuilder
 
 		private static void AppendGetAllMethod(StringBuilder buffer, ClrClass @class, AdapterResultType resultType)
 		{
+			string call;
 			buffer.Append(@"public void Fill(");
 			switch (resultType)
 			{
 				case AdapterResultType.List:
 					buffer.Append(@"List<");
+					call = @");";
 					break;
 				case AdapterResultType.Dictionary:
 					buffer.Append(@"Dictionary<long,");
+					call = @", this.Selector);";
 					break;
 				default:
 					throw new ArgumentOutOfRangeException("resultType");
 			}
 			buffer.Append(@class.Name);
 			buffer.AppendLine(@"> items) {");
-			buffer.AppendLine(@"if (items == null) throw new ArgumentNullException(""items"");");
+			ClrProperty.AppendParameterCheck(buffer, @"items");
 			buffer.AppendLine();
 			buffer.Append(@"var query = """);
-			AppendSelectQuery(buffer, @class);
+			DbTable.AppendSelectQuery(buffer, @class.Table);
 			buffer.AppendLine(@""";");
-			buffer.Append(@"this.QueryHelper.Fill(items, query, this.");
-			buffer.Append(@class.Name);
-			buffer.AppendLine(@"Creator);");
+			buffer.Append(@"this.QueryHelper.Fill(items, query, this.Creator");
+			buffer.AppendLine(call);
 			buffer.AppendLine(@"}");
 			buffer.AppendLine();
 		}
 
-		private static void AppendSelectQuery(StringBuilder buffer, ClrClass @class)
-		{
-			buffer.Append(@"SELECT ");
-
-			var table = @class.Table;
-			var addSeparator = false;
-			foreach (var column in table.Columns)
-			{
-				if (addSeparator)
-				{
-					buffer.Append(@", ");
-				}
-				buffer.Append(column.Name);
-				addSeparator = true;
-			}
-
-			buffer.Append(@" FROM ");
-			buffer.Append(table.Name);
-		}
-
 		private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, bool readOnly)
 		{
+			var name = @class.Name;
 			buffer.Append(@"private ");
-			buffer.Append(@class.Name);
-			buffer.Append(@" ");
-			buffer.Append(@class.Name);
-			buffer.AppendLine(@"Creator(IDataReader r){");
+			buffer.Append(name);
+			buffer.AppendLine(@" Creator(IDataReader r)");
+			buffer.AppendLine(@"{");
 
 			var properties = @class.Properties;
 			for (var index = 0; index < properties.Length; index++)
 			{
 				var property = properties[index];
-				var name = property.Name;
 
 				buffer.Append(@"var ");
-				buffer.Append(name);
-				buffer[buffer.Length - name.Length] = char.ToLowerInvariant(name[0]);
+				ClrProperty.AppendParameterName(buffer, property);
 				buffer.Append(@" = ");
-				AppendDefaultPropertyValue(buffer, property);
-
-				// TODO : !!! Read value from the reader if not dbNULL
-
+				ClrProperty.AppendDefaultValue(buffer, property);
 				buffer.AppendLine(@";");
-				buffer.AppendLine();
+				buffer.Append(@"if (!r.IsDBNull(");
+				buffer.Append(index);
+				buffer.AppendLine(@")){");
+				ClrProperty.AppendParameterName(buffer, property);
+				buffer.Append(@" = ");
+				ClrProperty.AppendDataReaderValue(buffer, property, index);
+				buffer.AppendLine(@";}");
 			}
 
+			buffer.Append(@"return new ");
+			buffer.Append(name);
 			if (readOnly)
 			{
-				// TODO : !!!
-				buffer.Append(@"return new Brand(");
-
-				var addSeparator = false;
-				foreach (var property in properties)
-				{
-					if (addSeparator)
-					{
-						buffer.Append(@", ");
-					}
-					var name = property.Name;
-					buffer.Append(name);
-					buffer[buffer.Length - name.Length] = char.ToLowerInvariant(name[0]);
-					addSeparator = true;
-				}
-
-				buffer.AppendLine(@");");
+				buffer.Append(@"(");
+				ClrClass.AppendParameters(buffer, @class);
+				buffer.Append(@")");
 			}
 			else
 			{
-				// TODO : !!!
+				buffer.Append(@"{");
+				ClrClass.AppendParametersAssignments(buffer, @class);
+				buffer.Append(@"}");
 			}
-			//buffer.AppendLine(@"return new Brand();");
+			buffer.AppendLine(@";");
 			buffer.AppendLine(@"}");
 			buffer.AppendLine();
 		}
 
-		private static void AppendDefaultPropertyValue(StringBuilder buffer, ClrProperty property)
+		private static void AppendSelectorMethod(StringBuilder buffer, ClrClass @class, AdapterResultType resultType)
 		{
-			var type = property.Type;
-			if (type == ClrType.Integer)
+			if (resultType == AdapterResultType.Dictionary)
 			{
-				buffer.Append(property.Nullable ? @"default(long?)" : @"0L");
-				return;
-			}
-			if (type == ClrType.Decimal)
-			{
-				buffer.Append(property.Nullable ? @"default(decimal?)" : @"0M");
-				return;
-			}
-			if (type == ClrType.DateTime)
-			{
-				buffer.Append(property.Nullable ? @"default(DateTime?)" : @"DateTime.MinValue");
-				return;
-			}
-			if (type == ClrType.String)
-			{
-				buffer.Append(@"string.Empty");
-				return;
-			}
-			if (type == ClrType.Bytes)
-			{
-				buffer.Append(@"default(byte[])");
-				return;
-			}
-
-			buffer.Append(@"default(");
-			buffer.Append(type.Name);
-			buffer.Append(@")");
-		}
-
-		private static void AppendSelectorMethod(StringBuilder buffer, ClrClass @class)
-		{
-			var name = char.ToLowerInvariant(@class.Name[0]);
-			var baseProperty = default(ClrProperty);
-			foreach (var property in @class.Properties)
-			{
-				if (property.Column.IsPrimaryKey)
+				var name = @class.Name;
+				var varName = char.ToLowerInvariant(name[0]);
+				var primaryKeyProperty = default(ClrProperty);
+				foreach (var property in @class.Properties)
 				{
-					baseProperty = property;
-					break;
+					if (property.Column.IsPrimaryKey)
+					{
+						primaryKeyProperty = property;
+						break;
+					}
 				}
-			}
 
-			buffer.Append(@"private long ");
-			buffer.Append(@class.Name);
-			buffer.Append(@"Selector(");
-			buffer.Append(@class.Name);
-			buffer.Append(@" ");
-			buffer.Append(name);
-			buffer.Append(@")");
-			buffer.Append(@"{");
-			buffer.Append(@"return ");
-			buffer.Append(name);
-			buffer.Append(@".");
-			buffer.Append(baseProperty.Name);
-			buffer.Append(@";");
-			buffer.AppendLine(@"}");
+				buffer.Append(@"private long Selector(");
+				buffer.Append(name);
+				buffer.Append(@" ");
+				buffer.Append(varName);
+				buffer.Append(@") { return ");
+				buffer.Append(varName);
+				buffer.Append(@".");
+				buffer.Append(primaryKeyProperty.Name);
+				buffer.Append(@";}");
+				buffer.AppendLine();
+			}
 		}
 	}
 }

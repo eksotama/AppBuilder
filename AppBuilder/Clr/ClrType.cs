@@ -12,6 +12,8 @@ namespace AppBuilder.Clr
 
 		public string Name { get; private set; }
 
+		public bool IsBuiltIn { get { return this == Integer || this == Decimal || this == DateTime || this == String || this == Bytes; } }
+
 		public ClrType(string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");

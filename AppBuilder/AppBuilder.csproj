@@ -42,6 +42,7 @@
     <Compile Include="AdapterBase.cs" />
     <Compile Include="AdapterClassGenerator.cs" />
     <Compile Include="AdapterResultType.cs" />
+    <Compile Include="ClassGenerator.cs" />
     <Compile Include="ObjectClassGenerator.cs" />
     <Compile Include="Clr\ClrClass.cs" />
     <Compile Include="Clr\ClrProperty.cs" />

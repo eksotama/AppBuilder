@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace AppBuilder.Db
 {
@@ -16,6 +17,28 @@ namespace AppBuilder.Db
 
 			this.Name = name;
 			this.Columns = columns;
+		}
+
+		public static void AppendSelectQuery(StringBuilder buffer, DbTable table)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (table == null) throw new ArgumentNullException("table");
+
+			buffer.Append(@"SELECT ");
+
+			var addSeparator = false;
+			foreach (var column in table.Columns)
+			{
+				if (addSeparator)
+				{
+					buffer.Append(@", ");
+				}
+				buffer.Append(column.Name);
+				addSeparator = true;
+			}
+
+			buffer.Append(@" FROM ");
+			buffer.Append(table.Name);
 		}
 	}
 }

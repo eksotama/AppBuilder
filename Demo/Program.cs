@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,31 @@ namespace Demo
 {
 	class Program
 	{
+		//public sealed class BrandAdapter : AdapterBase
+		//{
+		//	public BrandAdapter(QueryHelper queryHelper) : base(queryHelper) { }
+
+		//	public void Fill(List<Brand> items)
+		//	{
+		//		if (items == null) throw new ArgumentNullException("items");
+
+		//		var query = "SELECT brand_id, description, local_description FROM Brands";
+		//		this.QueryHelper.Fill(items, query, this.BrandCreator);
+		//	}
+
+		//	private Brand BrandCreator(IDataReader r)
+		//	{
+		//		var brandId = 0L;
+
+		//		var description = string.Empty;
+
+		//		var localDescription = string.Empty;
+
+		//		return new Brand(brandId, description, localDescription);
+		//	}
+
+		//	private long BrandSelector(Brand b) { return b.BrandId; }
+		//}
 
 
 		static void Main(string[] args)
@@ -60,17 +86,17 @@ namespace Demo
 				//}
 
 				//var mut = ObjectClassGenerator.Generate(obj, false);
-				//Console.WriteLine(mut);
-
 				//var immut = ObjectClassGenerator.Generate(obj, true);
-				//Console.WriteLine(immut);
 
-				var mut = AdapterClassGenerator.Generate(obj, false, AdapterResultType.List);
-				var immut = AdapterClassGenerator.Generate(obj, true, AdapterResultType.List);
+				var mut = AdapterClassGenerator.Generate(obj, false, AdapterResultType.Dictionary);
+				var immut = AdapterClassGenerator.Generate(obj, true, AdapterResultType.Dictionary);
 
-				var total = mut + Environment.NewLine + immut;
+				var total = mut + Environment.NewLine + Environment.NewLine + Environment.NewLine + immut;
 				File.WriteAllText(@"C:\temp\obj.cs", total);
 			}
 		}
 	}
+
+
+
 }
