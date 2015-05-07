@@ -175,11 +175,11 @@ namespace Demo
 				//	Console.WriteLine();
 				//}
 
-				//var mut = ObjectClassGenerator.Generate(obj, false);
-				//var immut = ObjectClassGenerator.Generate(obj, true);
+				//var mut = ClassGenerator.GenerateObject(obj, false);
+				//var immut = ClassGenerator.GenerateObject(obj, true);
 
-				var mut = AdapterClassGenerator.Generate(obj, false, AdapterResultType.List);
-				var immut = AdapterClassGenerator.Generate(obj, true, AdapterResultType.List);
+				var mut = ClassGenerator.GenerateAdapter(obj, false, AdapterResultType.List);
+				var immut = ClassGenerator.GenerateAdapter(obj, true, AdapterResultType.List);
 
 				var total = mut + Environment.NewLine + Environment.NewLine + Environment.NewLine + immut;
 				File.WriteAllText(@"C:\temp\obj.cs", total);
