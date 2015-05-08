@@ -74,7 +74,6 @@ namespace AppBuilder.Clr
 			foreach (var property in @class.Properties)
 			{
 				ClrProperty.AppendInitToDefaultValue(buffer, property);
-				buffer.AppendLine();
 			}
 			buffer.AppendLine(@"}");
 		}
@@ -91,26 +90,29 @@ namespace AppBuilder.Clr
 			buffer.Append(@")");
 			buffer.AppendLine();
 			buffer.AppendLine(@"{");
-			var current = buffer.Length;
-			foreach (var property in @class.Properties)
-			{
-				if (property.IsReferenceType)
-				{
-					ClrProperty.AppendParameterCheck(buffer, property);
-					
-				}
-			}
-			// Separate argument checks with properies assignments
-			if (current != buffer.Length)
-			{
-				buffer.AppendLine();
-			}
+			AppendParametersCheck(buffer, @class);
 			foreach (var property in @class.Properties)
 			{
 				ClrProperty.AppendInitToParameterName(buffer, property);
-				buffer.AppendLine();
 			}
 			buffer.AppendLine(@"}");
+		}
+
+		private static void AppendParametersCheck(StringBuilder buffer, ClrClass @class)
+		{
+			var oldLength = buffer.Length;
+			foreach (var property in @class.Properties)
+			{
+				if (!property.Nullable && property.IsReferenceType)
+				{
+					ClrProperty.AppendParameterCheck(buffer, property);
+				}
+			}
+			// Separate argument checks with properies assignments
+			if (oldLength != buffer.Length)
+			{
+				buffer.AppendLine();
+			}
 		}
 	}
 }

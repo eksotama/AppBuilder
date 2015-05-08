@@ -10,7 +10,7 @@ namespace AppBuilder.Db
 		{
 			if (script == null) throw new ArgumentNullException("script");
 
-			var schemas = script.Trim().Split(new[] { '|' });
+			var schemas = script.Trim().Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
 			var tables = new DbTable[schemas.Length];
 			for (var i = 0; i < schemas.Length; i++)
 			{

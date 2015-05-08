@@ -81,8 +81,8 @@ namespace Demo
 
 
 
-		
-	
+
+
 
 
 
@@ -96,37 +96,35 @@ namespace Demo
 			)";
 
 			input = @"
-						CREATE TABLE [ChannelGroups] (
-							[channel_group_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
-							[description] char(100) NOT NULL, 
-							[local_description] char(100) NOT NULL
-						)";
+			CREATE TABLE [ChannelGroups] (
+				[channel_group_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+				[description] char(100) NOT NULL, 
+				[local_description] char(100) NOT NULL
+			)";
 
 			input = @"
-									
-									CREATE TABLE [Channels] (
-										[channel_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
-										[description] char(100) NOT NULL, 
-										[local_description] char(100) NOT NULL, 
-										[sap_channel_id] char(10) NOT NULL,
-										[channel_group_id] integer,  
-										FOREIGN KEY ([channel_group_id])
-											REFERENCES [ChannelGroups] ([channel_group_id])
-											ON UPDATE NO ACTION ON DELETE NO ACTION
-									)";
+			CREATE TABLE [Channels] (
+				[channel_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+				[description] char(100) NOT NULL, 
+				[local_description] char(100) NOT NULL, 
+				[sap_channel_id] char(10) NOT NULL,
+				[channel_group_id] integer,  
+				FOREIGN KEY ([channel_group_id])
+					REFERENCES [ChannelGroups] ([channel_group_id])
+					ON UPDATE NO ACTION ON DELETE NO ACTION
+			)";
 
+			input = File.ReadAllText(@"C:\temp\dbscript.sql");
+
+
+			var buffer = new StringBuilder();
+
+			var nameProvider = new NameProvider();
+			nameProvider.AddOverride(@"Categories", @"Category");
+			nameProvider.AddOverride(@"Activities", @"Activity");
 
 			foreach (var table in DbSchemaParser.ParseTables(input))
 			{
-				//Console.WriteLine(table.Name);
-				//Console.WriteLine(table.Columns.Length);
-				//Console.WriteLine();
-				//foreach (var c in table.Columns)
-				//{
-				//	Console.WriteLine(c.Name + ", " + c.Type);
-				//}
-
-				var nameProvider = new NameProvider();
 				var obj = DbTableConverter.ToClrObject(table, nameProvider);
 				//Console.WriteLine(obj.Name);
 				//Console.WriteLine(obj.Properties.Length);
@@ -140,14 +138,24 @@ namespace Demo
 				//}
 
 				//var mut = ClassGenerator.GenerateObject(obj, false);
-				//var immut = ClassGenerator.GenerateObject(obj, true);
+				var immut = ClassGenerator.GenerateObject(obj, true);
 
-				var mut = ClassGenerator.GenerateAdapter(obj, false, AdapterResultType.Dictionary);
-				var immut = ClassGenerator.GenerateAdapter(obj, true, AdapterResultType.Dictionary);
+				//var mut = ClassGenerator.GenerateAdapter(obj, false, AdapterResultType.Dictionary);
+				var rt = AdapterResultType.Dictionary;
+				if (table.Columns.Any(c => c.ForeignKey != null))
+				{
+					rt= AdapterResultType.List;
+				}
+				//var immut = ClassGenerator.GenerateAdapter(obj, true, AdapterResultType.Dictionary);
 
-				var total = mut + Environment.NewLine + Environment.NewLine + Environment.NewLine + immut;
-				File.WriteAllText(@"C:\temp\obj.cs", total);
+				//buffer.AppendLine(mut);
+				//buffer.AppendLine();
+				//buffer.AppendLine();
+				buffer.AppendLine(immut);
+				buffer.AppendLine();
 			}
+
+			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());
 		}
 	}
 

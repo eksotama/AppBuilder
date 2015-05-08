@@ -71,7 +71,7 @@ namespace AppBuilder.Clr
 		{
 			if (this.Type == ClrType.Integer)
 			{
-				this.DefaultValue = this.Nullable ? @"null" : @"0L";
+				this.DefaultValue = this.Nullable ? @"default(long?)" : @"0L";
 				return;
 			}
 			if (this.Type == ClrType.String)
@@ -81,7 +81,7 @@ namespace AppBuilder.Clr
 			}
 			if (this.Type == ClrType.Decimal)
 			{
-				this.DefaultValue = this.Nullable ? @"null" : @"0M";
+				this.DefaultValue = this.Nullable ? @"default(decimal?)" : @"0M";
 				return;
 			}
 			if (this.Type == ClrType.DateTime)
@@ -96,7 +96,7 @@ namespace AppBuilder.Clr
 					this.DefaultValue = @"DateTime.MaxValue";
 					return;
 				}
-				this.DefaultValue = this.Nullable ? @"null" : @"DateTime.MinValue";
+				this.DefaultValue = this.Nullable ? @"default(DateTime?)" : @"DateTime.MinValue";
 				return;
 			}
 			if (this.Type == ClrType.Bytes)
@@ -156,6 +156,7 @@ namespace AppBuilder.Clr
 			buffer.Append(@" = ");
 			buffer.Append(value);
 			buffer.Append(@";");
+			buffer.AppendLine();
 		}
 
 		public static void AppendParameter(StringBuilder buffer, ClrProperty property)
@@ -215,10 +216,6 @@ namespace AppBuilder.Clr
 			buffer[buffer.Length - name.Length] = char.ToLowerInvariant(name[0]);
 		}
 
-
-		//
-		// TODO : !!!
-		//
 		public static void AppendDataReaderValue(StringBuilder buffer, ClrProperty property, int index)
 		{
 			if (buffer == null) throw new ArgumentNullException("buffer");
@@ -255,12 +252,9 @@ namespace AppBuilder.Clr
 			else
 			{
 				buffer.Append(@"_");
-				var table = property.Column.ForeignKey.Table;
-				foreach (var symbol in table)
-				{
-					buffer.Append(symbol);
-				}
-				buffer[buffer.Length - table.Length] = char.ToLowerInvariant(table[0]);
+				var name = property.Column.ForeignKey.Table;
+				buffer.Append(name);
+				LowerFirst(buffer, name);
 				buffer.Append(@"[r.GetInt64(");
 				buffer.Append(index);
 				buffer.Append(@")]");
@@ -281,9 +275,9 @@ namespace AppBuilder.Clr
 
 		private static void AppendForeignKeyVariableName(StringBuilder buffer, ClrProperty property)
 		{
-			var value = property.Column.ForeignKey.Table;
-			buffer.Append(value);
-			buffer[buffer.Length - value.Length] = char.ToLowerInvariant(value[0]);
+			var name = property.Column.ForeignKey.Table;
+			buffer.Append(name);
+			LowerFirst(buffer, name);
 		}
 
 		public static void AppendDictionaryParameter(StringBuilder buffer, ClrProperty property)

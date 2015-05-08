@@ -9,9 +9,12 @@ namespace AppBuilder
 	{
 		private readonly Dictionary<string, string> _overrides = new Dictionary<string, string>();
 
-		public void AddOverride(DbTable table, string @override)
+		public void AddOverride(string table, string @override)
 		{
-			_overrides.Add(table.Name, @override);
+			if (table == null) throw new ArgumentNullException("table");
+			if (@override == null) throw new ArgumentNullException("override");
+
+			_overrides.Add(table, @override);
 		}
 
 		public string GetClassName(string name)
