@@ -66,7 +66,8 @@ namespace AppBuilder.Clr
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (@class == null) throw new ArgumentNullException("class");
 
-			ClassGenerator.AppendContructorName(buffer, @class);
+			buffer.Append(@"public ");
+			buffer.Append(@class.Name);
 			buffer.Append(@"()");
 			buffer.AppendLine();
 			buffer.AppendLine(@"{");
@@ -83,7 +84,8 @@ namespace AppBuilder.Clr
 			if (buffer == null) throw new ArgumentNullException("buffer");
 			if (@class == null) throw new ArgumentNullException("class");
 
-			ClassGenerator.AppendContructorName(buffer, @class);
+			buffer.Append(@"public ");
+			buffer.Append(@class.Name);
 			buffer.Append(@"(");
 			AppendParameters(buffer, @class);
 			buffer.Append(@")");
@@ -95,7 +97,7 @@ namespace AppBuilder.Clr
 				if (property.IsReferenceType)
 				{
 					ClrProperty.AppendParameterCheck(buffer, property);
-					buffer.AppendLine();
+					
 				}
 			}
 			// Separate argument checks with properies assignments
