@@ -10,15 +10,14 @@ namespace AppBuilder
 		{
 			if (input == null) throw new ArgumentNullException("input");
 
-			if (input.Length > 0)
-			{
-				if (input.Length == 1)
-				{
-					return new string(char.ToUpperInvariant(input[0]), 1);
-				}
-				return char.ToUpperInvariant(input[0]) + input.Substring(1);
-			}
-			return input;
+			return ApplyFirst(input, char.ToUpperInvariant);
+		}
+
+		public static string LowerFirst(string input)
+		{
+			if (input == null) throw new ArgumentNullException("input");
+
+			return ApplyFirst(input, char.ToLowerInvariant);
 		}
 
 		public static void LowerFirst(StringBuilder buffer, string name)
@@ -27,8 +26,34 @@ namespace AppBuilder
 			if (name == null) throw new ArgumentNullException("name");
 			if (name.Length == 0) throw new ArgumentOutOfRangeException("name");
 
-			// Force the first letter of the name to be in lower case.
-			buffer[buffer.Length - name.Length] = char.ToLowerInvariant(name[0]);
+			ApplyFirst(buffer, name, char.ToLowerInvariant);
+		}
+
+		public static void UpperFirst(StringBuilder buffer, string name)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (name == null) throw new ArgumentNullException("name");
+			if (name.Length == 0) throw new ArgumentOutOfRangeException("name");
+
+			ApplyFirst(buffer, name, char.ToUpperInvariant);
+		}
+
+		private static string ApplyFirst(string input, Func<char, char> f)
+		{
+			if (input.Length > 0)
+			{
+				if (input.Length == 1)
+				{
+					return new string(f(input[0]), 1);
+				}
+				return f(input[0]) + input.Substring(1);
+			}
+			return input;
+		}
+
+		private static void ApplyFirst(StringBuilder buffer, string name, Func<char, char> f)
+		{
+			buffer[buffer.Length - name.Length] = f(name[0]);
 		}
 
 		public static string NormalizeTableSchema(string schema)

@@ -1,29 +1,13 @@
 ﻿using System;
 using System.Text;
 using AppBuilder.Clr;
+using AppBuilder.Clr.Providers;
 
-namespace AppBuilder
+namespace AppBuilder.Generators
 {
-	public static class CodeGenerator
+	public static class ObjectGenerator
 	{
-		public static string GetModifier(AccessModifier modifier)
-		{
-			switch (modifier)
-			{
-				case AccessModifier.Public:
-					return @"public";
-				case AccessModifier.Private:
-					return @"private";
-				case AccessModifier.Protected:
-					return @"protected";
-				case AccessModifier.Internal:
-					return @"internal";
-				default:
-					throw new ArgumentOutOfRangeException("modifier");
-			}
-		}
-
-		public static string GenerateObject(ClrClass @class, bool readOnly)
+		public static string Generate(ClrClass @class, bool readOnly)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 
@@ -64,13 +48,13 @@ namespace AppBuilder
 			AppendProperty(buffer, property, @" { get; private set; }");
 		}
 
-		private static void AppendProperty(StringBuilder buffer, ClrProperty property, string accessModifier)
+		private static void AppendProperty(StringBuilder buffer, ClrProperty property, string storeModifier)
 		{
 			buffer.Append(@"public ");
-			buffer.Append(property.PropertyType);
+			buffer.Append(PropertyTypeProvider.GetPropertyType(property));
 			buffer.Append(@" ");
 			buffer.Append(property.Name);
-			buffer.Append(accessModifier);
+			buffer.Append(storeModifier);
 		}
 
 		private static void AppendContructor(StringBuilder buffer, ClrClass @class, bool readOnly)
@@ -92,7 +76,7 @@ namespace AppBuilder
 			buffer.AppendLine(@"{");
 			foreach (var property in @class.Properties)
 			{
-				ClrProperty.AppendInitToDefaultValue(buffer, property);
+				AppendInitToDefaultValue(buffer, property);
 			}
 			buffer.AppendLine(@"}");
 		}
@@ -102,54 +86,21 @@ namespace AppBuilder
 			buffer.Append(@"public ");
 			buffer.Append(@class.Name);
 			buffer.Append(@"(");
-			AppendParameters(buffer, @class);
+			AppendParameters(buffer, @class, AppendParameter);
 			buffer.Append(@")");
 			buffer.AppendLine();
 			buffer.AppendLine(@"{");
 			AppendParametersCheck(buffer, @class);
 			foreach (var property in @class.Properties)
 			{
-				ClrProperty.AppendInitToParameterName(buffer, property);
+				AppendInitToParameterName(buffer, property);
 			}
 			buffer.AppendLine(@"}");
 		}
 
-		private static void AppendParametersCheck(StringBuilder buffer, ClrClass @class)
+		private static void AppendInitToDefaultValue(StringBuilder buffer, ClrProperty property)
 		{
-			var oldLength = buffer.Length;
-			foreach (var property in @class.Properties)
-			{
-				if (!property.Nullable && property.IsReferenceType)
-				{
-					ClrProperty.AppendParameterCheck(buffer, property);
-				}
-			}
-			// Separate argument checks with properies assignments
-			if (oldLength != buffer.Length)
-			{
-				buffer.AppendLine();
-			}
-		}
-
-		private static void AppendParameters(StringBuilder buffer, ClrClass @class)
-		{
-			AppendParameters(buffer, @class, ClrProperty.AppendParameter);
-		}
-
-		private static void AppendParameterNames(StringBuilder buffer, ClrClass @class)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (@class == null) throw new ArgumentNullException("class");
-
-			AppendParameters(buffer, @class, ClrProperty.AppendParameterName);
-		}
-
-		private static void AppendParametersAssignments(StringBuilder buffer, ClrClass @class)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (@class == null) throw new ArgumentNullException("class");
-
-			AppendParameters(buffer, @class, ClrProperty.AppendPropertyNameParameterName);
+			AppendInitializationTo(buffer, property, DefaultValueProvider.GetDefaultValue(property));
 		}
 
 		private static void AppendParameters(StringBuilder buffer, ClrClass @class, Action<StringBuilder, ClrProperty> appender)
@@ -164,6 +115,57 @@ namespace AppBuilder
 				appender(buffer, property);
 				addSeparator = true;
 			}
+		}
+
+		private static void AppendParameter(StringBuilder buffer, ClrProperty property)
+		{
+			buffer.Append(PropertyTypeProvider.GetPropertyType(property));
+			buffer.Append(@" ");
+			buffer.Append(ParameterNameProvider.GetParameterName(property));
+		}
+
+		private static void AppendParametersCheck(StringBuilder buffer, ClrClass @class)
+		{
+			var oldLength = buffer.Length;
+			foreach (var property in @class.Properties)
+			{
+				if (!property.Nullable && property.IsReferenceType)
+				{
+					AppendParameterCheck(buffer, ParameterNameProvider.GetParameterName(property));
+				}
+			}
+			// Separate argument checks with properies assignments
+			if (oldLength != buffer.Length)
+			{
+				buffer.AppendLine();
+			}
+		}
+
+		private static void AppendParameterCheck(StringBuilder buffer, string name)
+		{
+			buffer.Append(@"if (");
+			buffer.Append(name);
+			StringUtils.LowerFirst(buffer, name);
+			buffer.Append(@" == null ) throw new ArgumentNullException(""");
+			buffer.Append(name);
+			StringUtils.LowerFirst(buffer, name);
+			buffer.Append(@""");");
+			buffer.AppendLine();
+		}
+
+		private static void AppendInitToParameterName(StringBuilder buffer, ClrProperty property)
+		{
+			AppendInitializationTo(buffer, property, ParameterNameProvider.GetParameterName(property));
+		}
+
+		private static void AppendInitializationTo(StringBuilder buffer, ClrProperty property, string value)
+		{
+			buffer.Append(@"this.");
+			buffer.Append(property.Name);
+			buffer.Append(@" = ");
+			buffer.Append(value);
+			buffer.Append(@";");
+			buffer.AppendLine();
 		}
 	}
 }

@@ -1,4 +1,4 @@
-﻿namespace AppBuilder
+﻿namespace AppBuilder.Generators
 {
 	public enum AdapterResultType
 	{

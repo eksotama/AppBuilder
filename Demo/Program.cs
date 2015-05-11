@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AppBuilder;
 using AppBuilder.Db;
+using AppBuilder.Generators;
 
 namespace Demo
 {
@@ -92,7 +93,7 @@ namespace Demo
 			}
 		}
 
-		
+
 
 
 		public sealed class Album
@@ -176,27 +177,17 @@ ArtistId integer not null,
 			foreach (var table in DbSchemaParser.ParseTables(input))
 			{
 				var obj = DbTableConverter.ToClrObject(table, nameProvider);
-				//Console.WriteLine(obj.Name);
-				//Console.WriteLine(obj.Properties.Length);
-
-				//foreach (var p in obj.Properties)
-				//{
-				//	Console.WriteLine(p.Name);
-				//	Console.WriteLine(p.Type.Name);
-				//	Console.WriteLine(p.Nullable);
-				//	Console.WriteLine();
-				//}
 
 				//var mut = ClassGenerator.GenerateObject(obj, false);
-				var immut = CodeGenerator.GenerateObject(obj, true);
+				//var immut = ObjectGenerator.Generate(obj, true);
 
-				//var mut = ClassGenerator.GenerateAdapter(obj, false, AdapterResultType.Dictionary);
-				var rt = AdapterResultType.Dictionary;
-				if (table.Columns.Any(c => c.ForeignKey != null))
-				{
-					rt= AdapterResultType.List;
-				}
-				//var immut = ClassGenerator.GenerateAdapter(obj, true, AdapterResultType.Dictionary);
+				var mut = AdapterGenerator.Generate(obj, true, AdapterResultType.Dictionary);
+				//var rt = AdapterResultType.Dictionary;
+				//if (table.Columns.Any(c => c.ForeignKey != null))
+				//{
+				//	rt = AdapterResultType.List;
+				//}
+				var immut = AdapterGenerator.Generate(obj, true, AdapterResultType.Dictionary);
 
 				//buffer.AppendLine(mut);
 				//buffer.AppendLine();

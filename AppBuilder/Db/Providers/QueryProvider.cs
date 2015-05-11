@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Text;
 
-namespace AppBuilder.Db
+namespace AppBuilder.Db.Providers
 {
-	public static class DbQuery
+	public static class QueryProvider
 	{
 		public static string GetSelect(DbTable table)
 		{
 			if (table == null) throw new ArgumentNullException("table");
 
-			var buffer = new StringBuilder(@"SELECT ");
+			var capacity = 16 + table.Name.Length + (6 * table.Columns.Length);
+			var buffer = new StringBuilder(@"SELECT ", capacity);
 
 			var addSeparator = false;
 			foreach (var column in table.Columns)

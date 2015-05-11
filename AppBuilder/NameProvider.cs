@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using AppBuilder.Db;
 
 namespace AppBuilder
 {
@@ -32,11 +31,11 @@ namespace AppBuilder
 			return name.Substring(0, name.Length - 1);
 		}
 
-		public string GetPropertyName(DbColumn column)
+		public string GetPropertyName(string name, bool isForeignKey)
 		{
-			if (column == null) throw new ArgumentNullException("column");
+			if (name == null) throw new ArgumentNullException("name");
 
-			var name = column.Name;
+			//var name = column.Name;
 			var buffer = new StringBuilder(name.Length);
 
 			//some_value_id => SomeValueId
@@ -57,11 +56,10 @@ namespace AppBuilder
 				upperSymbol = false;
 			}
 
-			// Upper first
-			buffer[0] = char.ToUpperInvariant(buffer[0]);
+			StringUtils.UpperFirst(buffer, name);
 
 			// SomeValueId => SomeValue
-			if (column.ForeignKey != null)
+			if (isForeignKey)
 			{
 				var length = @"Id".Length;
 				buffer.Remove(buffer.Length - length, length);

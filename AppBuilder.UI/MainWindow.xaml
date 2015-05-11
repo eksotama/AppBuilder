@@ -1,0 +1,40 @@
+﻿<Window x:Class="AppBuilder.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:AppBuilder.UI.ViewModels"
+        mc:Ignorable="d"
+        Loaded="MainWindow_OnLoaded"
+        Title="MainWindow" Height="600" Width="800" d:DataContext="{d:DesignData DbViewModel}">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open"/>
+                <MenuItem Header="_Close"/>
+                <MenuItem Header="_Save"/>
+            </MenuItem>
+        </Menu>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="2.29*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+
+            <!--Header-->
+
+            <!--Tables-->
+            <ListView Grid.Row="0" Grid.Column="0" ItemsSource="{Binding Tables}">
+                <ListView.ItemTemplate>
+                    <DataTemplate DataType="viewModels:DbTableViewModel">
+                        <TextBlock Text="{Binding Name}"></TextBlock>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!--Contents-->
+            <ListView Grid.Row="0" Grid.Column="1" Background="FloralWhite"></ListView>
+        </Grid>
+    </DockPanel>
+
+</Window>
