@@ -7,23 +7,7 @@ namespace AppBuilder
 {
 	public static class ClassGenerator
 	{
-		public static string GenerateObject(ClrClass @class, bool readOnly)
-		{
-			if (@class == null) throw new ArgumentNullException("class");
-
-			var buffer = new StringBuilder(2 * 1024);
-			AppendClassDefinition(buffer, @class);
-			buffer.AppendLine();
-			buffer.AppendLine(@"{");
-			AppendProperties(buffer, @class, readOnly);
-			buffer.AppendLine();
-			AppendContructor(buffer, @class, readOnly);
-			buffer.AppendLine(@"}");
-
-			return buffer.ToString();
-		}
-
-		public static string GenerateAdapter(ClrClass @class, bool readOnly, AdapterResultType resultType)
+		public static string GenerateAdapter(ClrClass @class, bool readOnly, AdapterResultType resultType, DbTable table)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 
@@ -32,7 +16,7 @@ namespace AppBuilder
 			buffer.Append(@"Adapter : AdapterBase");
 			buffer.AppendLine(@"{");
 			AppendConstructor(buffer, @class);
-			AppendFillAllMethod(buffer, @class, resultType);
+			AppendFillAllMethod(buffer, @class, resultType, DbQuery.GetSelect(table));
 			AppendCreatorMethod(buffer, @class, readOnly);
 			AppendSelectorMethod(buffer, @class, resultType);
 			buffer.AppendLine(@"}");
@@ -100,7 +84,7 @@ namespace AppBuilder
 			}
 		}
 
-		private static void AppendFillAllMethod(StringBuilder buffer, ClrClass @class, AdapterResultType resultType)
+		private static void AppendFillAllMethod(StringBuilder buffer, ClrClass @class, AdapterResultType resultType, string query)
 		{
 			string call;
 			buffer.Append(@"public void FillAll(");
@@ -122,7 +106,7 @@ namespace AppBuilder
 			ClrProperty.AppendParameterCheck(buffer, @"items");
 			buffer.AppendLine();
 			buffer.Append(@"var query = """);
-			buffer.Append(DbQueryGenerator.GetSelectQuery(@class.Table));
+			buffer.Append(query);
 			buffer.AppendLine(@""";");
 			buffer.Append(@"this.QueryHelper.Fill(items, query, this.Creator");
 			buffer.AppendLine(call);
@@ -162,13 +146,13 @@ namespace AppBuilder
 			if (readOnly)
 			{
 				buffer.Append(@"(");
-				ClrClass.AppendParameterNames(buffer, @class);
+				//ClrClass.AppendParameterNames(buffer, @class);
 				buffer.Append(@")");
 			}
 			else
 			{
 				buffer.Append(@"{");
-				ClrClass.AppendParametersAssignments(buffer, @class);
+				//ClrClass.AppendParametersAssignments(buffer, @class);
 				buffer.Append(@"}");
 			}
 			buffer.AppendLine(@";");
@@ -231,30 +215,6 @@ namespace AppBuilder
 		private static void AppendClassName(StringBuilder buffer, ClrClass @class)
 		{
 			buffer.Append(@class.Name);
-		}
-
-		private static void AppendProperties(StringBuilder buffer, ClrClass @class, bool readOnly)
-		{
-			Action<StringBuilder, ClrProperty> appender = ClrProperty.AppendMutableProperty;
-			if (readOnly)
-			{
-				appender = ClrProperty.AppendReadOnlyProperty;
-			}
-			foreach (var property in @class.Properties)
-			{
-				appender(buffer, property);
-				buffer.AppendLine();
-			}
-		}
-
-		private static void AppendContructor(StringBuilder buffer, ClrClass @class, bool readOnly)
-		{
-			Action<StringBuilder, ClrClass> appender = ClrClass.AppendEmptyConstructor;
-			if (readOnly)
-			{
-				appender = ClrClass.AppendConstructorWithParameters;
-			}
-			appender(buffer, @class);
 		}
 	}
 }

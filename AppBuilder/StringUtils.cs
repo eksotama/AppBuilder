@@ -21,6 +21,16 @@ namespace AppBuilder
 			return input;
 		}
 
+		public static void LowerFirst(StringBuilder buffer, string name)
+		{
+			if (buffer == null) throw new ArgumentNullException("buffer");
+			if (name == null) throw new ArgumentNullException("name");
+			if (name.Length == 0) throw new ArgumentOutOfRangeException("name");
+
+			// Force the first letter of the name to be in lower case.
+			buffer[buffer.Length - name.Length] = char.ToLowerInvariant(name[0]);
+		}
+
 		public static string NormalizeTableSchema(string schema)
 		{
 			if (schema == null) throw new ArgumentNullException("schema");

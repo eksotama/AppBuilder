@@ -188,7 +188,7 @@ ArtistId integer not null,
 				//}
 
 				//var mut = ClassGenerator.GenerateObject(obj, false);
-				var immut = ClassGenerator.GenerateObject(obj, true);
+				var immut = CodeGenerator.GenerateObject(obj, true);
 
 				//var mut = ClassGenerator.GenerateAdapter(obj, false, AdapterResultType.Dictionary);
 				var rt = AdapterResultType.Dictionary;

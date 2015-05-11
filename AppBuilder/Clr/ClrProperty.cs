@@ -108,31 +108,6 @@ namespace AppBuilder.Clr
 			this.DefaultValue = @"default(" + this.Type.Name + @")";
 		}
 
-		public static void AppendMutableProperty(StringBuilder buffer, ClrProperty property)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (property == null) throw new ArgumentNullException("property");
-
-			AppendProperty(buffer, property, @" { get; set; }");
-		}
-
-		public static void AppendReadOnlyProperty(StringBuilder buffer, ClrProperty property)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (property == null) throw new ArgumentNullException("property");
-
-			AppendProperty(buffer, property, @" { get; private set; }");
-		}
-
-		private static void AppendProperty(StringBuilder buffer, ClrProperty property, string accessModifier)
-		{
-			buffer.Append(@"public ");
-			buffer.Append(property.PropertyType);
-			buffer.Append(@" ");
-			buffer.Append(property.Name);
-			buffer.Append(accessModifier);
-		}
-
 		public static void AppendInitToDefaultValue(StringBuilder buffer, ClrProperty property)
 		{
 			if (buffer == null) throw new ArgumentNullException("buffer");
@@ -202,18 +177,12 @@ namespace AppBuilder.Clr
 
 			buffer.Append(@"if (");
 			buffer.Append(name);
-			LowerFirst(buffer, name);
+			StringUtils.LowerFirst(buffer, name);
 			buffer.Append(@" == null ) throw new ArgumentNullException(""");
 			buffer.Append(name);
-			LowerFirst(buffer, name);
+			StringUtils.LowerFirst(buffer, name);
 			buffer.Append(@""");");
 			buffer.AppendLine();
-		}
-
-		private static void LowerFirst(StringBuilder buffer, string name)
-		{
-			// Force the first letter of the name to be in lower case.
-			buffer[buffer.Length - name.Length] = char.ToLowerInvariant(name[0]);
 		}
 
 		public static void AppendDataReaderValue(StringBuilder buffer, ClrProperty property, int index)
@@ -254,7 +223,7 @@ namespace AppBuilder.Clr
 				buffer.Append(@"_");
 				var name = property.Column.ForeignKey.Table;
 				buffer.Append(name);
-				LowerFirst(buffer, name);
+				StringUtils.LowerFirst(buffer, name);
 				buffer.Append(@"[r.GetInt64(");
 				buffer.Append(index);
 				buffer.Append(@")]");
@@ -277,7 +246,7 @@ namespace AppBuilder.Clr
 		{
 			var name = property.Column.ForeignKey.Table;
 			buffer.Append(name);
-			LowerFirst(buffer, name);
+			StringUtils.LowerFirst(buffer, name);
 		}
 
 		public static void AppendDictionaryParameter(StringBuilder buffer, ClrProperty property)
@@ -313,10 +282,10 @@ namespace AppBuilder.Clr
 			buffer.Append(@"_");
 			var name = property.Column.ForeignKey.Table;
 			buffer.Append(name);
-			LowerFirst(buffer, name);
+			StringUtils.LowerFirst(buffer, name);
 			buffer.Append(@" = ");
 			buffer.Append(name);
-			LowerFirst(buffer, name);
+			StringUtils.LowerFirst(buffer, name);
 			buffer.AppendLine(@";");
 		}
 	}

@@ -13,7 +13,7 @@ namespace AppBuilder
 
 			var name = nameProvider.GetClassName(table.Name);
 			var properties = GetClrProperties(table.Columns, nameProvider);
-			return new ClrClass(name, properties, table);
+			return new ClrClass(name, properties);
 		}
 
 		private static ClrProperty[] GetClrProperties(DbColumn[] columns, NameProvider nameProvider)

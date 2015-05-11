@@ -3,9 +3,9 @@ using System.Text;
 
 namespace AppBuilder.Db
 {
-	public static class DbQueryGenerator
+	public static class DbQuery
 	{
-		public static string GetSelectQuery(DbTable table)
+		public static string GetSelect(DbTable table)
 		{
 			if (table == null) throw new ArgumentNullException("table");
 
