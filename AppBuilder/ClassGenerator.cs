@@ -122,7 +122,7 @@ namespace AppBuilder
 			ClrProperty.AppendParameterCheck(buffer, @"items");
 			buffer.AppendLine();
 			buffer.Append(@"var query = """);
-			DbTable.AppendSelectQuery(buffer, @class.Table);
+			buffer.Append(DbQueryGenerator.GetSelectQuery(@class.Table));
 			buffer.AppendLine(@""";");
 			buffer.Append(@"this.QueryHelper.Fill(items, query, this.Creator");
 			buffer.AppendLine(call);

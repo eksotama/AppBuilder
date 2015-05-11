@@ -50,6 +50,7 @@
     <Compile Include="Db\DbForeignKey.cs" />
     <Compile Include="Db\DbSchemaParser.cs" />
     <Compile Include="Db\DbTable.cs" />
+    <Compile Include="Db\DbQueryGenerator.cs" />
     <Compile Include="NameProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryHelper.cs" />
