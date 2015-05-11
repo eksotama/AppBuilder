@@ -39,7 +39,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdapterBase.cs" />
     <Compile Include="AdapterResultType.cs" />
     <Compile Include="ClassGenerator.cs" />
     <Compile Include="Clr\ClrClass.cs" />

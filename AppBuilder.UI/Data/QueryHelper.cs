@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 
-namespace AppBuilder
+namespace AppBuilder.UI.Data
 {
 	public static class QueryHelper
 	{

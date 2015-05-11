@@ -78,6 +78,39 @@ namespace Demo
 
 
 
+		public sealed class Artist
+		{
+			public long Id { get; private set; }
+			public string Name { get; private set; }
+
+			public Artist(long id, string name)
+			{
+				if (name == null) throw new ArgumentNullException("name");
+
+				this.Id = id;
+				this.Name = name;
+			}
+		}
+
+		
+
+
+		public sealed class Album
+		{
+			public long Id { get; private set; }
+			public string Name { get; private set; }
+			public Artist Artist { get; private set; }
+
+			public Album(long id, string name, Artist artist)
+			{
+				if (name == null) throw new ArgumentNullException("name");
+				if (artist == null) throw new ArgumentNullException("artist");
+
+				this.Id = id;
+				this.Name = name;
+				this.Artist = artist;
+			}
+		}
 
 
 
@@ -115,6 +148,23 @@ namespace Demo
 			)";
 
 			input = File.ReadAllText(@"C:\temp\dbscript.sql");
+
+			input = @"
+CREATE TABLE Artists
+(
+Id integer not null PRIMARY KEY AUTOINCREMENT,
+Name text(64) not null
+)
+
+|
+
+CREATE TABLE Albums
+(
+Id integer not null PRIMARY KEY AUTOINCREMENT,
+Name text(128) not null,
+ArtistId integer not null,
+ Foreign key (ArtistId) references artists(id) ON UPDATE NO ACTION ON DELETE NO ACTION
+)";
 
 
 			var buffer = new StringBuilder();

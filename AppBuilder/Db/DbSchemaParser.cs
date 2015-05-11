@@ -86,9 +86,9 @@ namespace AppBuilder.Db
 		{
 			var value = StringUtils.ExtractBetween(input, @"REFERENCES ", @")");
 			var index = value.IndexOf('(');
-			var destinationTable = value.Substring(0, index).Trim();
-			var destinationColumn = value.Substring(index + 1).Trim();
-			return new DbForeignKey(destinationTable, destinationColumn);
+			var table = value.Substring(0, index).Trim();
+			var column = value.Substring(index + 1).Trim();
+			return new DbForeignKey(StringUtils.UpperFirst(table), StringUtils.UpperFirst(column));
 		}
 
 		private static DbColumn ParseColumn(string input)

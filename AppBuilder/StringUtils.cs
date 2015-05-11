@@ -6,6 +6,21 @@ namespace AppBuilder
 {
 	public static class StringUtils
 	{
+		public static string UpperFirst(string input)
+		{
+			if (input == null) throw new ArgumentNullException("input");
+
+			if (input.Length > 0)
+			{
+				if (input.Length == 1)
+				{
+					return new string(char.ToUpperInvariant(input[0]), 1);
+				}
+				return char.ToUpperInvariant(input[0]) + input.Substring(1);
+			}
+			return input;
+		}
+
 		public static string NormalizeTableSchema(string schema)
 		{
 			if (schema == null) throw new ArgumentNullException("schema");
