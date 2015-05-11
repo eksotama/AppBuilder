@@ -28,7 +28,7 @@ namespace AppBuilder.Generators
 			}
 		}
 
-		public static string Generate(ClrClass @class, bool readOnly, NameProvider nameProvider, DbTable table)
+		public static string Generate(DbTable table, NameProvider nameProvider, ClrClass @class, bool readOnly)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
@@ -37,6 +37,8 @@ namespace AppBuilder.Generators
 			var buffer = new StringBuilder(2 * 1024);
 			buffer.Append(@"public sealed class ");
 			buffer.Append(@class.Name);
+			buffer.Append(@"Adapter : I");
+			buffer.Append(@class.Name);
 			buffer.Append(@"Adapter");
 			buffer.AppendLine(@"{");
 			var dictionaries = GetDictionaries(@class, nameProvider);
@@ -44,9 +46,30 @@ namespace AppBuilder.Generators
 			{
 				AppendConstructor(buffer, @class, dictionaries);
 			}
-			AppendFillAllMethod(buffer, @class, QueryProvider.GetSelect(table));
+			AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
 			AppendCreatorMethod(buffer, @class, readOnly, dictionaries);
 			AppendSelectorMethod(buffer, @class);
+			buffer.AppendLine(@"}");
+
+			return buffer.ToString();
+		}
+
+		public static string GenerateInterface(DbTable table, NameProvider nameProvider, ClrClass @class)
+		{
+			if (table == null) throw new ArgumentNullException("table");
+			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
+			if (@class == null) throw new ArgumentNullException("class");
+
+			var buffer = new StringBuilder(@"public interface I", 128);
+
+			buffer.Append(@class.Name);
+			buffer.Append(@"Adapter");
+			buffer.AppendLine(@"{");
+			buffer.Append(@"void Fill(Dictionary<long, ");
+			buffer.Append(@class.Name);
+			buffer.Append(@"> ");
+			buffer.Append(StringUtils.LowerFirst(nameProvider.GetDbName(@class.Name)));
+			buffer.Append(@");");
 			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
@@ -141,9 +164,9 @@ namespace AppBuilder.Generators
 			buffer.AppendLine(@";");
 		}
 
-		private static void AppendFillAllMethod(StringBuilder buffer, ClrClass @class, string query)
+		private static void AppendFillMethod(StringBuilder buffer, ClrClass @class, string query)
 		{
-			buffer.Append(@"public void FillAll(");
+			buffer.Append(@"public void Fill(");
 			buffer.Append(@"Dictionary<long, ");
 			buffer.Append(@class.Name);
 			buffer.AppendLine(@"> items) {");

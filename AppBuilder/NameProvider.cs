@@ -71,7 +71,7 @@ namespace AppBuilder
 				upperSymbol = false;
 			}
 
-			StringUtils.UpperFirst(buffer, name);
+			buffer[0] = char.ToUpperInvariant(buffer[0]);
 
 			// SomeValueId => SomeValue
 			if (isForeignKey)

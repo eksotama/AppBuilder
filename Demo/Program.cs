@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SQLite;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,105 +15,88 @@ namespace Demo
 {
 	class Program
 	{
-		//public sealed class Brand
-		//{
-		//	public long BrandId { get; set; }
-		//	public string Description { get; set; }
-		//	public string LocalDescription { get; set; }
-
-		//	public Brand()
-		//	{
-		//		this.BrandId = 0L;
-		//		this.Description = string.Empty;
-		//		this.LocalDescription = string.Empty;
-		//	}
-		//}
-
-		public sealed class Brand
+		public sealed class ChannelGroup
 		{
-			public long BrandId { get; private set; }
+			public long ChannelGroupId { get; private set; }
 			public string Description { get; private set; }
 			public string LocalDescription { get; private set; }
 
-			public Brand(long brandId, string description, string localDescription)
+			public ChannelGroup(long channelGroupId, string description, string localDescription)
 			{
 				if (description == null) throw new ArgumentNullException("description");
 				if (localDescription == null) throw new ArgumentNullException("localDescription");
 
-				this.BrandId = brandId;
+				this.ChannelGroupId = channelGroupId;
 				this.Description = description;
 				this.LocalDescription = localDescription;
 			}
 		}
 
-		public sealed class ChannelGroup
+
+		public interface IChannelGroupAdapter
 		{
-			public long ChannelGroupId { get; set; }
-			public string Description { get; set; }
-			public string LocalDescription { get; set; }
-
-			public ChannelGroup()
-			{
-				this.ChannelGroupId = 0L;
-				this.Description = string.Empty;
-				this.LocalDescription = string.Empty;
-			}
-		}
-
-		public sealed class Channel
-		{
-			public long ChannelId { get; set; }
-			public string Description { get; set; }
-			public string LocalDescription { get; set; }
-			public string SapChannelId { get; set; }
-			public ChannelGroup ChannelGroup { get; set; }
-
-			public Channel()
-			{
-				this.ChannelId = 0L;
-				this.Description = string.Empty;
-				this.LocalDescription = string.Empty;
-				this.SapChannelId = string.Empty;
-				this.ChannelGroup = default(ChannelGroup);
-			}
+			void Fill(Dictionary<long, ChannelGroup> channelGroups);
 		}
 
 
-
-
-		public sealed class Artist
+		public sealed class ChannelGroupAdapter : IChannelGroupAdapter
 		{
-			public long Id { get; private set; }
-			public string Name { get; private set; }
-
-			public Artist(long id, string name)
+			public void Fill(Dictionary<long, ChannelGroup> items)
 			{
-				if (name == null) throw new ArgumentNullException("name");
+				if (items == null) throw new ArgumentNullException("items");
 
-				this.Id = id;
-				this.Name = name;
+				var query = "SELECT channel_group_id, description, local_description FROM ChannelGroups";
+				QueryHelper.Fill(items, query, this.Creator, this.Selector);
+			}
+
+			private ChannelGroup Creator(IDataReader r)
+			{
+				var channelGroupId = 0L;
+				if (!r.IsDBNull(0))
+				{
+					channelGroupId = r.GetInt64(0);
+				}
+				var description = string.Empty;
+				if (!r.IsDBNull(1))
+				{
+					description = r.GetString(1);
+				}
+				var localDescription = string.Empty;
+				if (!r.IsDBNull(2))
+				{
+					localDescription = r.GetString(2);
+				}
+				return new ChannelGroup(channelGroupId, description, localDescription);
+			}
+
+			private long Selector(ChannelGroup c) { return c.ChannelGroupId; }
+		}
+
+
+		public sealed class ChannelGroupHelper
+		{
+			private readonly Dictionary<long, ChannelGroup> _channelGroups = new Dictionary<long, ChannelGroup>();
+
+			public Dictionary<long, ChannelGroup> ChannelGroups
+			{
+				get { return _channelGroups; }
+			}
+
+			public void Load(ChannelGroupAdapter adapter)
+			{
+				if (adapter == null) throw new ArgumentNullException("adapter");
+
+				adapter.Fill(_channelGroups);
 			}
 		}
 
 
 
 
-		public sealed class Album
-		{
-			public long Id { get; private set; }
-			public string Name { get; private set; }
-			public Artist Artist { get; private set; }
 
-			public Album(long id, string name, Artist artist)
-			{
-				if (name == null) throw new ArgumentNullException("name");
-				if (artist == null) throw new ArgumentNullException("artist");
 
-				this.Id = id;
-				this.Name = name;
-				this.Artist = artist;
-			}
-		}
+
+
 
 
 
@@ -136,36 +121,19 @@ namespace Demo
 				[local_description] char(100) NOT NULL
 			)";
 
-			input = @"
-			CREATE TABLE [Channels] (
-				[channel_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
-				[description] char(100) NOT NULL, 
-				[local_description] char(100) NOT NULL, 
-				[sap_channel_id] char(10) NOT NULL,
-				[channel_group_id] integer,  
-				FOREIGN KEY ([channel_group_id])
-					REFERENCES [ChannelGroups] ([channel_group_id])
-					ON UPDATE NO ACTION ON DELETE NO ACTION
-			)";
+			//			input = @"
+			//			CREATE TABLE [Channels] (
+			//				[channel_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
+			//				[description] char(100) NOT NULL, 
+			//				[local_description] char(100) NOT NULL, 
+			//				[sap_channel_id] char(10) NOT NULL,
+			//				[channel_group_id] integer,  
+			//				FOREIGN KEY ([channel_group_id])
+			//					REFERENCES [ChannelGroups] ([channel_group_id])
+			//					ON UPDATE NO ACTION ON DELETE NO ACTION
+			//			)";
 
-			input = File.ReadAllText(@"C:\temp\dbscript.sql");
-
-			input = @"
-CREATE TABLE Artists
-(
-Id integer not null PRIMARY KEY AUTOINCREMENT,
-Name text(64) not null
-)
-
-|
-
-CREATE TABLE Albums
-(
-Id integer not null PRIMARY KEY AUTOINCREMENT,
-Name text(128) not null,
-ArtistId integer not null,
- Foreign key (ArtistId) references artists(id) ON UPDATE NO ACTION ON DELETE NO ACTION
-)";
+			//input = File.ReadAllText(@"C:\temp\script.sql");
 
 
 			var buffer = new StringBuilder();
@@ -176,28 +144,60 @@ ArtistId integer not null,
 
 			foreach (var table in DbSchemaParser.ParseTables(input))
 			{
-				var obj = DbTableConverter.ToClrObject(table, nameProvider);
+				var cls = DbTableConverter.ToClrObject(table, nameProvider);
+				var readOnly = true;
+				var obj = ObjectGenerator.Generate(cls, readOnly);
+				var adapter = AdapterGenerator.Generate(table, nameProvider, cls, readOnly);
+				var adapterInterface = AdapterGenerator.GenerateInterface(table, nameProvider, cls);
+				var helper = HelperGenerator.Generate(nameProvider, cls);
 
-				//var mut = ClassGenerator.GenerateObject(obj, false);
-				//var immut = ObjectGenerator.Generate(obj, true);
-
-				//var mut = AdapterGenerator.Generate(obj, true, nameProvider, table);
-				//var rt = AdapterResultType.Dictionary;
-				//if (table.Columns.Any(c => c.ForeignKey != null))
-				//{
-				//	rt = AdapterResultType.List;
-				//}
-				var immut = AdapterGenerator.Generate(obj, true, nameProvider, table);
-
-				buffer.AppendLine(ObjectGenerator.Generate(obj, true));
-				//buffer.AppendLine(mut);
-				//buffer.AppendLine();
-				//buffer.AppendLine();
-				buffer.AppendLine(immut);
+				buffer.AppendLine(obj);
 				buffer.AppendLine();
+				buffer.AppendLine(adapterInterface);
+				buffer.AppendLine();
+				buffer.AppendLine(adapter);
+				buffer.AppendLine();
+				buffer.AppendLine(helper);
+				buffer.AppendLine();
+
+
 			}
 
+
 			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());
+
+
+			try
+			{
+				using (var cn = new SQLiteConnection(@"Data Source=C:\Users\bg900343\Desktop\local.sqlite;"))
+				{
+					cn.Open();
+					QueryHelper.Connection = cn;
+					var h = new ChannelGroupHelper();
+
+					var adapter = new ChannelGroupAdapter();
+					var s = Stopwatch.StartNew();
+					for (var i = 0; i < 100; i++)
+					{
+						h.Load(adapter);
+					}
+					s.Stop();
+					Console.WriteLine(s.ElapsedMilliseconds);
+
+					foreach (var kv in h.ChannelGroups)
+					{
+						var cg = kv.Value;
+						Console.WriteLine(cg.ChannelGroupId);
+						Console.WriteLine(cg.Description);
+						Console.WriteLine();
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex);
+			}
+
 		}
 	}
 

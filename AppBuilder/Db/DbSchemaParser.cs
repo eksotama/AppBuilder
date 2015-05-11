@@ -114,7 +114,7 @@ namespace AppBuilder.Db
 			{
 				return Tuple.Create(DbColumnType.Bytes, default(int?));
 			}
-			if (input.StartsWith(@"DECIMAL(", StringComparison.OrdinalIgnoreCase) || input.StartsWith(@"NUMERIC(", StringComparison.OrdinalIgnoreCase))
+			if (input.StartsWith(@"DECIMAL", StringComparison.OrdinalIgnoreCase) || input.StartsWith(@"NUMERIC", StringComparison.OrdinalIgnoreCase))
 			{
 				return Tuple.Create(DbColumnType.Decimal, default(int?));
 			}
