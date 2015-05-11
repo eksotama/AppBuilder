@@ -181,14 +181,15 @@ ArtistId integer not null,
 				//var mut = ClassGenerator.GenerateObject(obj, false);
 				//var immut = ObjectGenerator.Generate(obj, true);
 
-				var mut = AdapterGenerator.Generate(obj, true, AdapterResultType.Dictionary);
+				//var mut = AdapterGenerator.Generate(obj, true, nameProvider, table);
 				//var rt = AdapterResultType.Dictionary;
 				//if (table.Columns.Any(c => c.ForeignKey != null))
 				//{
 				//	rt = AdapterResultType.List;
 				//}
-				var immut = AdapterGenerator.Generate(obj, true, AdapterResultType.Dictionary);
+				var immut = AdapterGenerator.Generate(obj, true, nameProvider, table);
 
+				buffer.AppendLine(ObjectGenerator.Generate(obj, true));
 				//buffer.AppendLine(mut);
 				//buffer.AppendLine();
 				//buffer.AppendLine();
@@ -199,6 +200,7 @@ ArtistId integer not null,
 			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());
 		}
 	}
+
 
 
 

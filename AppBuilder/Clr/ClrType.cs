@@ -7,11 +7,12 @@ namespace AppBuilder.Clr
 		public static readonly ClrType Integer = new ClrType(@"long", @"long?");
 		public static readonly ClrType Decimal = new ClrType(@"decimal", @"decimal?");
 		public static readonly ClrType DateTime = new ClrType(@"DateTime", @"DateTime?");
-		public static readonly ClrType String = new ClrType(@"string");
-		public static readonly ClrType Bytes = new ClrType(@"byte[]");
+		public static readonly ClrType String = new ClrType(@"string", true);
+		public static readonly ClrType Bytes = new ClrType(@"byte[]", true);
 
 		public string Name { get; private set; }
 		public string NullableName { get; private set; }
+		public bool IsBuiltIn { get; private set; }
 
 		public ClrType(string name)
 		{
@@ -21,7 +22,13 @@ namespace AppBuilder.Clr
 			this.Name = name;
 		}
 
-		public ClrType(string name, string nullableName)
+		private ClrType(string name, bool isBuiltIn)
+			: this(name)
+		{
+			this.IsBuiltIn = isBuiltIn;
+		}
+
+		private ClrType(string name, string nullableName)
 			: this(name)
 		{
 			if (nullableName == null) throw new ArgumentNullException("nullableName");
@@ -29,6 +36,7 @@ namespace AppBuilder.Clr
 
 			this.Name = name;
 			this.NullableName = nullableName;
+			this.IsBuiltIn = true;
 		}
 	}
 }

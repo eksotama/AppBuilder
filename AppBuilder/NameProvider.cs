@@ -31,6 +31,21 @@ namespace AppBuilder
 			return name.Substring(0, name.Length - 1);
 		}
 
+		public string GetDbName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			foreach (var kv in _overrides)
+			{
+				if (kv.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+				{
+					return kv.Value;
+				}
+			}
+
+			return name + @"s";
+		}
+
 		public string GetPropertyName(string name, bool isForeignKey)
 		{
 			if (name == null) throw new ArgumentNullException("name");
