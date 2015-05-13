@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using AppBuilder.Clr;
 using AppBuilder.Db;
 
@@ -6,57 +7,42 @@ namespace AppBuilder
 {
 	public static class DbTableConverter
 	{
-		public static ClrClass ToClrObject(DbTable table, NameProvider nameProvider)
+		private static readonly TypeDefinition[] Types =
+		{
+			TypeDefinition.Long,
+			TypeDefinition.Decimal,
+			TypeDefinition.String,
+			TypeDefinition.DateTime,
+			TypeDefinition.Bytes
+		};
+
+		public static ClassDefinition ToClassDefinition(DbTable table, NameProvider nameProvider)
 		{
 			if (table == null) throw new ArgumentNullException("table");
 			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
 
-			var name = nameProvider.GetClassName(table.Name);
-			var properties = GetClrProperties(table.Columns, nameProvider);
-			return new ClrClass(name, properties);
+			return new ClassDefinition(nameProvider.GetClassName(table.Name), GetProperties(table.Columns, nameProvider));
 		}
 
-		private static ClrProperty[] GetClrProperties(DbColumn[] columns, NameProvider nameProvider)
+		private static PropertyDefinition[] GetProperties(IList<DbColumn> columns, NameProvider nameProvider)
 		{
-			var properties = new ClrProperty[columns.Length];
+			var properties = new PropertyDefinition[columns.Count];
 
-			for (var index = 0; index < columns.Length; index++)
+			for (var index = 0; index < columns.Count; index++)
 			{
-				properties[index] = GetClrProperty(columns[index], nameProvider);
+				var column = columns[index];
+				var foreignKey = column.ForeignKey;
+
+				var name = nameProvider.GetPropertyName(column.Name, foreignKey != null);
+				var type = Types[(int)column.Type];
+				if (foreignKey != null)
+				{
+					type = new TypeDefinition(nameProvider.GetClassName(foreignKey.Table));
+				}
+				properties[index] = new PropertyDefinition(type, name, FieldDefinition.AutoProperty);
 			}
 
 			return properties;
-		}
-
-		private static ClrProperty GetClrProperty(DbColumn column, NameProvider nameProvider)
-		{
-			var name = nameProvider.GetPropertyName(column.Name, column.ForeignKey != null);
-			var type = GetClrType(column, nameProvider);
-			return new ClrProperty(name, type, column.AllowNull);
-		}
-
-		private static ClrType GetClrType(DbColumn column, NameProvider nameProvider)
-		{
-			var foreignKey = column.ForeignKey;
-			if (foreignKey == null)
-			{
-				switch (column.Type)
-				{
-					case DbColumnType.Integer:
-						return ClrType.Integer;
-					case DbColumnType.Decimal:
-						return ClrType.Decimal;
-					case DbColumnType.String:
-						return ClrType.String;
-					case DbColumnType.DateTime:
-						return ClrType.DateTime;
-					case DbColumnType.Bytes:
-						return ClrType.Bytes;
-					default:
-						throw new ArgumentOutOfRangeException();
-				}
-			}
-			return new ClrType(nameProvider.GetClassName(foreignKey.Table));
 		}
 	}
 }

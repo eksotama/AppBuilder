@@ -57,9 +57,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Clr\ClrClass.cs" />
-    <Compile Include="Clr\ClrProperty.cs" />
-    <Compile Include="Clr\ClrType.cs" />
+    <Compile Include="Clr\AccessModifier.cs" />
+    <Compile Include="Clr\ClassDefinition.cs" />
+    <Compile Include="CodeGenerator.cs" />
+    <Compile Include="Clr\MethodDefinition.cs" />
+    <Compile Include="Clr\ContructorDefinition.cs" />
+    <Compile Include="Clr\FieldDefinition.cs" />
+    <Compile Include="Clr\ParameterDefinition.cs" />
+    <Compile Include="Clr\PropertyDefinition.cs" />
+    <Compile Include="Clr\TypeDefinition.cs" />
     <Compile Include="DbTableConverter.cs" />
     <Compile Include="Db\DbColumn.cs" />
     <Compile Include="Db\DbColumnType.cs" />
@@ -68,15 +74,11 @@
     <Compile Include="Db\DbTable.cs" />
     <Compile Include="Generators\AdapterGenerator.cs" />
     <Compile Include="Db\Providers\QueryProvider.cs" />
-    <Compile Include="Clr\Providers\DefaultValueProvider.cs" />
-    <Compile Include="Generators\HelperGenerator.cs" />
     <Compile Include="NameProvider.cs" />
-    <Compile Include="Generators\ObjectGenerator.cs" />
-    <Compile Include="Clr\Providers\ParameterNameProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Clr\Providers\PropertyTypeProvider.cs" />
     <Compile Include="StringUtils.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

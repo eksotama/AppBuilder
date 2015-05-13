@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AppBuilder;
+using AppBuilder.Clr;
 using AppBuilder.Db;
 using AppBuilder.Generators;
 
@@ -32,12 +33,10 @@ namespace Demo
 			}
 		}
 
-
 		public interface IChannelGroupAdapter
 		{
 			void Fill(Dictionary<long, ChannelGroup> channelGroups);
 		}
-
 
 		public sealed class ChannelGroupAdapter : IChannelGroupAdapter
 		{
@@ -72,15 +71,11 @@ namespace Demo
 			private long Selector(ChannelGroup c) { return c.ChannelGroupId; }
 		}
 
-
 		public sealed class ChannelGroupHelper
 		{
 			private readonly Dictionary<long, ChannelGroup> _channelGroups = new Dictionary<long, ChannelGroup>();
 
-			public Dictionary<long, ChannelGroup> ChannelGroups
-			{
-				get { return _channelGroups; }
-			}
+			public Dictionary<long, ChannelGroup> ChannelGroups { get { return _channelGroups; } }
 
 			public void Load(ChannelGroupAdapter adapter)
 			{
@@ -92,21 +87,32 @@ namespace Demo
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+	
 
 
 		static void Main(string[] args)
 		{
+			//var cl = new ClassDefinition(@"Person");
+			//cl.Properties.Add(PropertyDefinition.CreateImmutable(TypeDefinition.String, @"name"));
+			//cl.Properties.Add(PropertyDefinition.CreateImmutable(TypeDefinition.Long, @"age"));
+
+			//var v = CodeHelper.GetClass(cl, false);
+			//Console.WriteLine(v);
+			//return;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 			var input = @"
 			CREATE TABLE [Brands] (
 				[brand_id] integer NOT NULL PRIMARY KEY AUTOINCREMENT, 
@@ -144,24 +150,11 @@ namespace Demo
 
 			foreach (var table in DbSchemaParser.ParseTables(input))
 			{
-				var cls = DbTableConverter.ToClrObject(table, nameProvider);
-				var readOnly = true;
-				var obj = ObjectGenerator.Generate(cls, readOnly);
-				var adapter = AdapterGenerator.Generate(table, nameProvider, cls, readOnly);
-				var adapterInterface = AdapterGenerator.GenerateInterface(table, nameProvider, cls);
-				var helper = HelperGenerator.Generate(nameProvider, cls);
-
-				buffer.AppendLine(obj);
-				buffer.AppendLine();
-				buffer.AppendLine(adapterInterface);
-				buffer.AppendLine();
-				buffer.AppendLine(adapter);
-				buffer.AppendLine();
-				buffer.AppendLine(helper);
-				buffer.AppendLine();
-
-
+				var definition = DbTableConverter.ToClassDefinition(table, nameProvider);
+				Console.WriteLine(CodeGenerator.GetClass(definition, true));
+				return;
 			}
+
 
 
 			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());
@@ -200,8 +193,5 @@ namespace Demo
 
 		}
 	}
-
-
-
 
 }

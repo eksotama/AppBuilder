@@ -82,5 +82,61 @@ namespace AppBuilder
 
 			return buffer.ToString();
 		}
+
+		public static string ToClassName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return ToUpperFirst(name);
+		}
+
+		public static string ToFieldName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			var flag = @"_";
+			if (name.StartsWith(flag))
+			{
+				return name;
+			}
+
+			var buffer = new StringBuilder(name.Length + 1);
+
+			buffer.Append(name);
+			buffer[1] = char.ToLowerInvariant(buffer[1]);
+
+			return buffer.ToString();
+		}
+
+		public static string ToPropertyName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return ToUpperFirst(name);
+		}
+
+		public static string ToParamterName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			var lower = name[0];
+			var upper = char.ToLowerInvariant(lower);
+			if (lower == upper)
+			{
+				return name;
+			}
+			return upper + name.Substring(1);
+		}
+
+		private static string ToUpperFirst(string name)
+		{
+			var first = name[0];
+			var upper = char.ToUpperInvariant(first);
+			if (first == upper)
+			{
+				return name;
+			}
+			return upper + name.Substring(1);
+		}
 	}
 }
