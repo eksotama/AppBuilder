@@ -2,12 +2,12 @@
 
 namespace AppBuilder.Clr
 {
-	public sealed class ParameterDefinition
+	public sealed class ClrParameter
 	{
-		public TypeDefinition Type { get; private set; }
+		public ClrType Type { get; private set; }
 		public string Name { get; private set; }
 
-		public ParameterDefinition(TypeDefinition type, string name)
+		public ClrParameter(ClrType type, string name)
 		{
 			if (type == null) throw new ArgumentNullException("type");
 			if (name == null) throw new ArgumentNullException("name");

@@ -57,22 +57,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Clr\AccessModifier.cs" />
-    <Compile Include="Clr\ClassDefinition.cs" />
+    <Compile Include="Clr\ClrClass.cs" />
     <Compile Include="CodeGenerator.cs" />
-    <Compile Include="Clr\MethodDefinition.cs" />
-    <Compile Include="Clr\ContructorDefinition.cs" />
-    <Compile Include="Clr\FieldDefinition.cs" />
-    <Compile Include="Clr\ParameterDefinition.cs" />
-    <Compile Include="Clr\PropertyDefinition.cs" />
-    <Compile Include="Clr\TypeDefinition.cs" />
+    <Compile Include="Clr\ClrContructor.cs" />
+    <Compile Include="Clr\ClrField.cs" />
+    <Compile Include="Clr\ClrParameter.cs" />
+    <Compile Include="Clr\ClrProperty.cs" />
+    <Compile Include="Clr\ClrType.cs" />
     <Compile Include="DbTableConverter.cs" />
     <Compile Include="Db\DbColumn.cs" />
     <Compile Include="Db\DbColumnType.cs" />
     <Compile Include="Db\DbForeignKey.cs" />
     <Compile Include="Db\DbSchemaParser.cs" />
     <Compile Include="Db\DbTable.cs" />
-    <Compile Include="Generators\AdapterGenerator.cs" />
     <Compile Include="Db\Providers\QueryProvider.cs" />
     <Compile Include="NameProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

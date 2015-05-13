@@ -4,13 +4,10 @@ using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using AppBuilder;
 using AppBuilder.Clr;
 using AppBuilder.Db;
-using AppBuilder.Generators;
 
 namespace Demo
 {
@@ -87,18 +84,20 @@ namespace Demo
 
 
 
-	
+
 
 
 		static void Main(string[] args)
 		{
-			//var cl = new ClassDefinition(@"Person");
-			//cl.Properties.Add(PropertyDefinition.CreateImmutable(TypeDefinition.String, @"name"));
-			//cl.Properties.Add(PropertyDefinition.CreateImmutable(TypeDefinition.Long, @"age"));
+			var cl = new ClrClass(@"Person", new[]
+			                                 {
+				                                 ClrProperty.Auto(ClrType.String, @"name"),
+				                                 ClrProperty.Auto(ClrType.Long, @"age"),
+			                                 });
 
-			//var v = CodeHelper.GetClass(cl, false);
-			//Console.WriteLine(v);
-			//return;
+			var v = CodeGenerator.GetClass(cl, true);
+			Console.WriteLine(v);
+			return;
 
 
 
