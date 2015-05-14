@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using AppBuilder.Clr;
+using AppBuilder.Db;
+using AppBuilder.Db.Providers;
 
 namespace AppBuilder
 {
@@ -166,11 +168,11 @@ namespace AppBuilder
 			return buffer.ToString();
 		}
 
-		public static string GetAdapter(ClrClass @class, NameProvider nameProvider, bool readOnly, string query)
+		public static string GetAdapter(ClrClass @class, NameProvider nameProvider, bool readOnly, DbTable table)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
-			if (query == null) throw new ArgumentNullException("query");
+			if (table == null) throw new ArgumentNullException("table");
 
 			var buffer = new StringBuilder(2 * 1024);
 			buffer.Append(@"public");
@@ -191,7 +193,7 @@ namespace AppBuilder
 			{
 				AppendConstructor(buffer, @class, fields);
 			}
-			AppendFillMethod(buffer, @class, query);
+			AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
 			AppendCreatorMethod(buffer, @class, readOnly, fields);
 			AppendSelectorMethod(buffer, @class);
 			buffer.AppendLine(@"}");

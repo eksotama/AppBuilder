@@ -1,11 +1,29 @@
+using System;
+
 namespace AppBuilder.Db
 {
-	public enum DbColumnType
+	public sealed class DbColumnType
 	{
-		Integer,
-		Decimal,
-		String,
-		DateTime,
-		Bytes
+		public readonly static DbColumnType Integer = new DbColumnType(@"INTEGER");
+		public readonly static DbColumnType String = new DbColumnType(@"STRING");
+		public readonly static DbColumnType Decimal = new DbColumnType(@"DECIMAL");
+		public readonly static DbColumnType DateTime = new DbColumnType(@"DATETIME");
+		public readonly static DbColumnType Bytes = new DbColumnType(@"BLOB");
+
+		public string Name { get; private set; }
+		public int? Length { get; private set; }
+
+		public DbColumnType(string name, int? length = null)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			this.Name = name;
+			this.Length = length;
+		}
+
+		public static DbColumnType GetString(int length)
+		{
+			return new DbColumnType(@"STRING", length);
+		}
 	}
 }

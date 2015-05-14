@@ -161,8 +161,13 @@ namespace Demo
 			                                 });
 
 			var v = CodeGenerator.GetClass(cl, true);
-			v = CodeGenerator.GetAdapter(cl, new NameProvider(), true, @"SELECT * FROM ....");
-			v = CodeGenerator.GetAdapterInterface(cl, new NameProvider());
+			v = CodeGenerator.GetAdapter(cl, new NameProvider(), true, new DbTable(@"Persons", new[]
+			                                                                                   {
+				                                                                                   new DbColumn(DbColumnType.Integer, @"id", isPrimaryKey: true), 
+				                                                                                   new DbColumn(DbColumnType.String, @"name"), 
+				                                                                                   new DbColumn(DbColumnType.Integer, @"age"), 
+			                                                                                   }));
+
 			Console.WriteLine(v);
 			return;
 

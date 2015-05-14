@@ -28,7 +28,7 @@ namespace AppBuilder
 			}
 
 			// Remove the last symbol, Probably it will be 's' (Users => User)
-			return name.Substring(0, name.Length - 1);
+			return ToClassName(name.Substring(0, name.Length - 1));
 		}
 
 		public string GetDbName(string name)

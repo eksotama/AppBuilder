@@ -25,7 +25,7 @@ namespace AppBuilder
 				var foreignKey = column.ForeignKey;
 
 				var name = nameProvider.GetPropertyName(column.Name, foreignKey != null);
-				var type = ClrType.Types[(int)column.Type];
+				var type = GetClrType(column.Type);
 				if (foreignKey != null)
 				{
 					type = new ClrType(nameProvider.GetClassName(foreignKey.Table));
@@ -34,6 +34,31 @@ namespace AppBuilder
 			}
 
 			return properties;
+		}
+
+		private static ClrType GetClrType(DbColumnType type)
+		{
+			if (type == DbColumnType.Integer)
+			{
+				return ClrType.Long;
+			}
+			if (type == DbColumnType.String)
+			{
+				return ClrType.String;
+			}
+			if (type == DbColumnType.Decimal)
+			{
+				return ClrType.Decimal;
+			}
+			if (type == DbColumnType.DateTime)
+			{
+				return ClrType.DateTime;
+			}
+			if (type == DbColumnType.Bytes)
+			{
+				return ClrType.Bytes;
+			}
+			return ClrType.Long;
 		}
 	}
 }

@@ -10,15 +10,6 @@ namespace AppBuilder.Clr
 		public static readonly ClrType DateTime = new ClrType(@"DateTime", false, @"DateTime.MinValue", @"GetDateTime");
 		public static readonly ClrType Bytes = new ClrType(@"byte[]", false, @"default(byte[])", @"GetBytes");
 
-		public static readonly ClrType[] Types =
-		{
-			Long,
-			Decimal,
-			String,
-			DateTime,
-			Bytes
-		};
-
 		public string Name { get; private set; }
 		public bool IsReference { get; private set; }
 		public bool IsBuiltIn { get; private set; }

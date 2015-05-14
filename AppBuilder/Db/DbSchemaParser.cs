@@ -94,33 +94,33 @@ namespace AppBuilder.Db
 		private static DbColumn ParseColumn(string input)
 		{
 			var name = input.Substring(0, input.IndexOf(' '));
-			var definition = ParseColumnType(StringUtils.ExtractBetween(input, @" ", @" "));
+			var type = ParseColumnType(StringUtils.ExtractBetween(input, @" ", @" "));
 			var allowNull = input.IndexOf(@"NOT NULL", StringComparison.OrdinalIgnoreCase) < 0;
 			var isPrimaryKey = input.IndexOf(@"PRIMARY KEY", StringComparison.OrdinalIgnoreCase) >= 0;
-			return new DbColumn(name, definition.Item1, definition.Item2, allowNull, isPrimaryKey);
+			return new DbColumn(type, name, allowNull: allowNull, isPrimaryKey: isPrimaryKey);
 		}
 
-		private static Tuple<DbColumnType, int?> ParseColumnType(string input)
+		private static DbColumnType ParseColumnType(string input)
 		{
 			if (input.Equals(@"INTEGER", StringComparison.OrdinalIgnoreCase))
 			{
-				return Tuple.Create(DbColumnType.Integer, default(int?));
+				return DbColumnType.Integer;
 			}
-			if (input.StartsWith(@"CHAR(", StringComparison.OrdinalIgnoreCase) || input.StartsWith(@"TEXT(", StringComparison.OrdinalIgnoreCase))
+			if (input.StartsWith(@"CHAR(", StringComparison.OrdinalIgnoreCase))
 			{
-				return Tuple.Create(DbColumnType.String, new int?(int.Parse(StringUtils.ExtractBetween(input, @"(", @")"))));
+				return DbColumnType.GetString(int.Parse(StringUtils.ExtractBetween(input, @"(", @")")));
 			}
 			if (input.Equals(@"BLOB", StringComparison.OrdinalIgnoreCase))
 			{
-				return Tuple.Create(DbColumnType.Bytes, default(int?));
+				return DbColumnType.Bytes;
 			}
 			if (input.StartsWith(@"DECIMAL", StringComparison.OrdinalIgnoreCase) || input.StartsWith(@"NUMERIC", StringComparison.OrdinalIgnoreCase))
 			{
-				return Tuple.Create(DbColumnType.Decimal, default(int?));
+				return DbColumnType.Decimal;
 			}
 			if (input.StartsWith(@"DATETIME", StringComparison.OrdinalIgnoreCase))
 			{
-				return Tuple.Create(DbColumnType.DateTime, default(int?));
+				return DbColumnType.DateTime;
 			}
 			throw new ArgumentOutOfRangeException(@"input");
 		}

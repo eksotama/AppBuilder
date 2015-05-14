@@ -30,19 +30,19 @@ namespace AppBuilder.UI.ViewModels
 			this.Tables.Clear();
 
 			
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
-			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn("Name", DbColumnType.String, 40, false, true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
+			this.Tables.Add(new DbTableViewModel(new DbTable(@"A", new[] { new DbColumn(DbColumnType.Integer, "Name", allowNull: false, isPrimaryKey: true), })));
 		}
 	}
 
