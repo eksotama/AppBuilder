@@ -82,20 +82,87 @@ namespace Demo
 			}
 		}
 
+		public sealed class Course
+		{
 
+		}
 
+		public sealed class Person
+		{
+			public long Id { get; private set; }
 
+			public Person(long id, string name, long age, Course course)
+			{
+				throw new NotImplementedException();
+			}
+		}
+
+		public interface IPersonAdapter
+		{
+			void Fill(Dictionary<long, Person> persons);
+		}
+
+		public sealed class PersonAdapter : IPersonAdapter
+		{
+			private readonly Dictionary<long, Course> _courses;
+
+			public PersonAdapter(Dictionary<long, Course> courses)
+			{
+				if (courses == null) throw new ArgumentNullException("courses");
+
+				_courses = courses;
+			}
+
+			public void Fill(Dictionary<long, Person> items)
+			{
+				if (items == null) throw new ArgumentNullException("items");
+
+				var query = "SELECT * FROM ....";
+				QueryHelper.Fill(items, query, this.Creator, this.Selector);
+			}
+
+			private Person Creator(IDataReader r)
+			{
+				var id = 0L;
+				if (!r.IsDBNull(0))
+				{
+					id = r.GetInt64(0);
+				}
+				var name = string.Empty;
+				if (!r.IsDBNull(1))
+				{
+					name = r.GetString(1);
+				}
+				var age = 0L;
+				if (!r.IsDBNull(2))
+				{
+					age = r.GetInt64(2);
+				}
+				var course = default(Course);
+				if (!r.IsDBNull(3))
+				{
+					course = _courses[r.GetInt64(3)];
+				}
+				return new Person(id, name, age, course);
+			}
+
+			private long Selector(Person p) { return p.Id; }
+		}
 
 
 		static void Main(string[] args)
 		{
 			var cl = new ClrClass(@"Person", new[]
 			                                 {
+				                                 ClrProperty.Auto(ClrType.Long, @"id"),
 				                                 ClrProperty.Auto(ClrType.String, @"name"),
 				                                 ClrProperty.Auto(ClrType.Long, @"age"),
+				                                 ClrProperty.Auto(new ClrType(@"Course"), @"course"),
 			                                 });
 
 			var v = CodeGenerator.GetClass(cl, true);
+			v = CodeGenerator.GetAdapter(cl, new NameProvider(), true, @"SELECT * FROM ....");
+			v = CodeGenerator.GetAdapterInterface(cl, new NameProvider());
 			Console.WriteLine(v);
 			return;
 
@@ -192,5 +259,6 @@ namespace Demo
 
 		}
 	}
+
 
 }

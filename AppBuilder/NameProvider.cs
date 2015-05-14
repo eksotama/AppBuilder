@@ -102,6 +102,7 @@ namespace AppBuilder
 
 			var buffer = new StringBuilder(name.Length + 1);
 
+			buffer.Append('_');
 			buffer.Append(name);
 			buffer[1] = char.ToLowerInvariant(buffer[1]);
 

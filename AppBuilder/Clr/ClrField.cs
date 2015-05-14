@@ -11,8 +11,9 @@ namespace AppBuilder.Clr
 		public string Name { get; private set; }
 		public string InitialValue { get; private set; }
 		public bool IsReadOnly { get; private set; }
+		public ClrProperty Property { get; private set; }
 
-		public ClrField(ClrType type, string name, string initialValue = "", bool isReadOnly = true)
+		public ClrField(ClrType type, string name, string initialValue = "", bool isReadOnly = true, ClrProperty property = null)
 		{
 			if (type == null) throw new ArgumentNullException("type");
 			if (name == null) throw new ArgumentNullException("name");
@@ -22,6 +23,7 @@ namespace AppBuilder.Clr
 			this.Name = NameProvider.ToFieldName(name);
 			this.InitialValue = initialValue;
 			this.IsReadOnly = isReadOnly;
+			this.Property = property;
 		}
 	}
 }

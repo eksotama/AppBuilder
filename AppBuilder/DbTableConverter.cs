@@ -7,15 +7,6 @@ namespace AppBuilder
 {
 	public static class DbTableConverter
 	{
-		private static readonly ClrType[] Types =
-		{
-			ClrType.Long,
-			ClrType.Decimal,
-			ClrType.String,
-			ClrType.DateTime,
-			ClrType.Bytes
-		};
-
 		public static ClrClass ToClassDefinition(DbTable table, NameProvider nameProvider)
 		{
 			if (table == null) throw new ArgumentNullException("table");
@@ -34,7 +25,7 @@ namespace AppBuilder
 				var foreignKey = column.ForeignKey;
 
 				var name = nameProvider.GetPropertyName(column.Name, foreignKey != null);
-				var type = Types[(int)column.Type];
+				var type = ClrType.Types[(int)column.Type];
 				if (foreignKey != null)
 				{
 					type = new ClrType(nameProvider.GetClassName(foreignKey.Table));

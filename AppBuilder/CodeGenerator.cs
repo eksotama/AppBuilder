@@ -15,7 +15,7 @@ namespace AppBuilder
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 
-			var buffer = new StringBuilder();
+			var buffer = new StringBuilder(1024);
 
 			buffer.Append(@"public");
 			buffer.Append(Space);
@@ -76,7 +76,6 @@ namespace AppBuilder
 				contructor = new ClrContructor(@class.Name, properties);
 			}
 			buffer.AppendLine(GetContructor(contructor));
-
 			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
@@ -146,323 +145,296 @@ namespace AppBuilder
 			return buffer.ToString();
 		}
 
-		//private sealed class DictionaryField
-		//{
-		//	public ClrProperty Property { get; private set; }
-		//	public string Type { get; private set; }
-		//	public string Name { get; private set; }
+		public static string GetAdapterInterface(ClrClass @class, NameProvider nameProvider)
+		{
+			if (@class == null) throw new ArgumentNullException("class");
+			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
 
-		//	public DictionaryField(ClrProperty property, string type, string name)
-		//	{
-		//		if (property == null) throw new ArgumentNullException("property");
-		//		if (type == null) throw new ArgumentNullException("type");
-		//		if (name == null) throw new ArgumentNullException("name");
+			var buffer = new StringBuilder(@"public interface I", 128);
 
-		//		this.Property = property;
-		//		this.Type = type;
-		//		this.Name = name;
-		//	}
-		//}
+			buffer.Append(@class.Name);
+			buffer.Append(@"Adapter");
+			buffer.AppendLine(@"{");
+			buffer.Append(@"void Fill(");
+			buffer.Append(@"Dictionary<long, ");
+			buffer.Append(@class.Name);
+			buffer.Append(@"> ");
+			buffer.Append(StringUtils.LowerFirst(nameProvider.GetDbName(@class.Name)));
+			buffer.Append(@");");
+			buffer.AppendLine(@"}");
 
-		//public static string Generate(DbTable table, NameProvider nameProvider, ClrClass @class, bool readOnly)
-		//{
-		//	if (@class == null) throw new ArgumentNullException("class");
-		//	if (nameProvider == null) throw new ArgumentNullException("nameProvider");
-		//	if (table == null) throw new ArgumentNullException("table");
+			return buffer.ToString();
+		}
 
-		//	var buffer = new StringBuilder(2 * 1024);
-		//	buffer.Append(@"public sealed class ");
-		//	buffer.Append(@class.Name);
-		//	buffer.Append(@"Adapter : I");
-		//	buffer.Append(@class.Name);
-		//	buffer.Append(@"Adapter");
-		//	buffer.AppendLine(@"{");
-		//	var dictionaries = GetDictionaries(@class, nameProvider);
-		//	if (dictionaries.Count > 0)
-		//	{
-		//		AppendConstructor(buffer, @class, dictionaries);
-		//	}
-		//	AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
-		//	AppendCreatorMethod(buffer, @class, readOnly, dictionaries);
-		//	AppendSelectorMethod(buffer, @class);
-		//	buffer.AppendLine(@"}");
+		public static string GetAdapter(ClrClass @class, NameProvider nameProvider, bool readOnly, string query)
+		{
+			if (@class == null) throw new ArgumentNullException("class");
+			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
+			if (query == null) throw new ArgumentNullException("query");
 
-		//	return buffer.ToString();
-		//}
+			var buffer = new StringBuilder(2 * 1024);
+			buffer.Append(@"public");
+			buffer.Append(Space);
+			buffer.Append(@"sealed class");
+			buffer.Append(Space);
+			buffer.Append(@class.Name);
+			buffer.Append(@"Adapter");
+			buffer.Append(Space);
+			buffer.Append(':');
+			buffer.Append(Space);
+			buffer.Append('I');
+			buffer.Append(@class.Name);
+			buffer.Append(@"Adapter");
+			buffer.AppendLine(@"{");
+			var fields = GetFileds(@class, nameProvider);
+			if (fields.Length > 0)
+			{
+				AppendConstructor(buffer, @class, fields);
+			}
+			AppendFillMethod(buffer, @class, query);
+			AppendCreatorMethod(buffer, @class, readOnly, fields);
+			AppendSelectorMethod(buffer, @class);
+			buffer.AppendLine(@"}");
 
-		//public static string GenerateInterface(DbTable table, NameProvider nameProvider, ClrClass @class)
-		//{
-		//	if (table == null) throw new ArgumentNullException("table");
-		//	if (nameProvider == null) throw new ArgumentNullException("nameProvider");
-		//	if (@class == null) throw new ArgumentNullException("class");
+			return buffer.ToString();
+		}
 
-		//	var buffer = new StringBuilder(@"public interface I", 128);
+		private static ClrField[] GetFileds(ClrClass @class, NameProvider nameProvider)
+		{
+			var totalFields = 0;
+			foreach (var property in @class.Properties)
+			{
+				var type = property.Type;
+				if (!type.IsBuiltIn)
+				{
+					totalFields++;
+				}
+			}
 
-		//	buffer.Append(@class.Name);
-		//	buffer.Append(@"Adapter");
-		//	buffer.AppendLine(@"{");
-		//	buffer.Append(@"void Fill(Dictionary<long, ");
-		//	buffer.Append(@class.Name);
-		//	buffer.Append(@"> ");
-		//	buffer.Append(StringUtils.LowerFirst(nameProvider.GetDbName(@class.Name)));
-		//	buffer.Append(@");");
-		//	buffer.AppendLine(@"}");
+			var fields = new ClrField[totalFields];
+			if (fields.Length > 0)
+			{
+				var i = 0;
+				foreach (var property in @class.Properties)
+				{
+					var type = property.Type;
+					if (!type.IsBuiltIn)
+					{
+						fields[i++] = new ClrField(type, nameProvider.GetDbName(type.Name), property: property);
+					}
+				}
+			}
+			return fields;
+		}
 
-		//	return buffer.ToString();
-		//}
+		private static void AppendConstructor(StringBuilder buffer, ClrClass @class, ClrField[] fields)
+		{
+			foreach (var field in fields)
+			{
+				AppendField(buffer, field);
+			}
+			buffer.AppendLine();
 
-		//private static void AppendConstructor(StringBuilder buffer, ClrClass @class, List<DictionaryField> dictionaryFields)
-		//{
-		//	foreach (var dictionaryField in dictionaryFields)
-		//	{
-		//		AppendField(buffer, dictionaryField);
-		//	}
-		//	buffer.AppendLine();
+			buffer.Append(@"public ");
+			buffer.Append(@class.Name);
+			buffer.Append(@"Adapter(");
+			var parameters = new ClrParameter[fields.Length];
+			for (var i = 0; i < fields.Length; i++)
+			{
+				var field = fields[i];
+				parameters[i] = new ClrParameter(field.Type, field.Name.Substring(1));
+			}
+			foreach (var parameter in parameters)
+			{
+				AppendDictionaryParameter(buffer, parameter);
+			}
+			buffer[buffer.Length - 1] = ')';
+			buffer.AppendLine(@"{");
+			foreach (var parameter in parameters)
+			{
+				AppendCheck(buffer, parameter.Name);
+			}
+			buffer.AppendLine();
+			for (var i = 0; i < fields.Length; i++)
+			{
+				AppendFieldAssignment(buffer, fields[i], parameters[i]);
+			}
+			buffer.AppendLine(@"}");
+			buffer.AppendLine();
+		}
 
-		//	buffer.Append(@"public ");
-		//	buffer.Append(@class.Name);
-		//	buffer.Append(@"Adapter(");
-		//	foreach (var dictionaryField in dictionaryFields)
-		//	{
-		//		AppendParameter(buffer, dictionaryField);
-		//	}
-		//	buffer[buffer.Length - 1] = ')';
-		//	buffer.AppendLine(@"{");
-		//	foreach (var dictionaryField in dictionaryFields)
-		//	{
-		//		AppendCheck(buffer, dictionaryField);
-		//	}
-		//	buffer.AppendLine();
-		//	foreach (var dictionaryField in dictionaryFields)
-		//	{
-		//		AppendAssignment(buffer, dictionaryField);
-		//	}
-		//	buffer.AppendLine(@"}");
-		//	buffer.AppendLine();
-		//}
+		private static void AppendField(StringBuilder buffer, ClrField field)
+		{
+			buffer.Append(@"private readonly");
+			buffer.Append(Space);
+			AppendDictionary(buffer, field.Type, field.Name);
+			buffer.Append(Semicolumn);
+			buffer.AppendLine();
+		}
 
-		//private static List<DictionaryField> GetDictionaries(ClrClass @class, NameProvider nameProvider)
-		//{
-		//	var dictionaries = new List<DictionaryField>(1);
-		//	foreach (var property in @class.Properties)
-		//	{
-		//		if (!property.Type.IsBuiltIn)
-		//		{
-		//			var type = PropertyTypeProvider.GetPropertyType(property);
-		//			dictionaries.Add(new DictionaryField(property, type, StringUtils.LowerFirst(nameProvider.GetDbName(type))));
-		//		}
-		//	}
-		//	return dictionaries;
-		//}
+		private static void AppendDictionary(StringBuilder buffer, ClrType type, string name)
+		{
+			buffer.Append(@"Dictionary<long, ");
+			buffer.Append(type.Name);
+			buffer.Append(@"> ");
+			buffer.Append(name);
+		}
 
-		//private static void AppendField(StringBuilder buffer, DictionaryField dictionaryField)
-		//{
-		//	buffer.Append(@"private readonly ");
-		//	AppendDictionary(buffer, dictionaryField, @"_");
-		//	buffer.AppendLine(@";");
-		//}
+		private static void AppendDictionaryParameter(StringBuilder buffer, ClrParameter parameter)
+		{
+			AppendDictionary(buffer, parameter.Type, parameter.Name);
+			buffer.Append(Comma);
+		}
 
-		//private static void AppendParameter(StringBuilder buffer, DictionaryField dictionaryField)
-		//{
-		//	AppendDictionary(buffer, dictionaryField);
-		//	buffer.Append(@",");
-		//}
+		private static void AppendFieldAssignment(StringBuilder buffer, ClrField field, ClrParameter parameter)
+		{
+			buffer.Append(field.Name);
+			buffer.Append(@" = ");
+			buffer.Append(parameter.Name);
+			buffer.Append(Semicolumn);
+			buffer.AppendLine();
+		}
 
-		//private static void AppendDictionary(StringBuilder buffer, DictionaryField dictionaryField, string fieldModifier = "")
-		//{
-		//	buffer.Append(@"Dictionary<long, ");
-		//	buffer.Append(dictionaryField.Type);
-		//	buffer.Append(@"> ");
-		//	buffer.Append(fieldModifier);
-		//	buffer.Append(dictionaryField.Name);
-		//}
+		private static void AppendFillMethod(StringBuilder buffer, ClrClass @class, string query)
+		{
+			buffer.Append(@"public");
+			buffer.Append(Space);
+			buffer.Append(@"void Fill(");
+			buffer.Append(@"Dictionary<long, ");
+			buffer.Append(@class.Name);
+			buffer.Append(@"> items)");
+			buffer.AppendLine(@"{");
+			AppendCheck(buffer, @"items");
+			buffer.AppendLine();
+			buffer.Append(@"var query = """);
+			buffer.Append(query);
+			buffer.AppendLine(@""";");
+			buffer.AppendLine(@"QueryHelper.Fill(items, query, this.Creator, this.Selector);");
+			buffer.AppendLine(@"}");
+			buffer.AppendLine();
+		}
 
-		//private static void AppendCheck(StringBuilder buffer, DictionaryField dictionaryField)
-		//{
-		//	AppendCheck(buffer, dictionaryField.Name);
-		//}
+		private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, bool readOnly, ClrField[] fields)
+		{
+			var name = @class.Name;
+			buffer.Append(@"private");
+			buffer.Append(Space);
+			buffer.Append(name);
+			buffer.AppendLine(@" Creator(IDataReader r)");
+			buffer.AppendLine(@"{");
 
-		//private static void AppendCheck(StringBuilder buffer, string name)
-		//{
-		//	buffer.Append(@"if (");
-		//	buffer.Append(name);
-		//	buffer.Append(@" == null) throw new ArgumentNullException(""");
-		//	buffer.Append(name);
-		//	buffer.AppendLine(@""");");
-		//}
+			var properties = @class.Properties;
+			var parameters = GetParameters(properties);
+			for (var i = 0; i < properties.Length; i++)
+			{
+				var property = properties[i];
+				var parameter = parameters[i];
 
-		//private static void AppendAssignment(StringBuilder buffer, DictionaryField dictionaryField)
-		//{
-		//	buffer.Append(@"_");
-		//	buffer.Append(dictionaryField.Name);
-		//	buffer.Append(@" = ");
-		//	buffer.Append(dictionaryField.Name);
-		//	buffer.AppendLine(@";");
-		//}
+				buffer.Append(@"var ");
+				buffer.Append(parameter.Name);
+				buffer.Append(@" = ");
+				buffer.Append(property.Type.DefaultValue);
+				buffer.Append(Semicolumn);
+				buffer.AppendLine();
+				buffer.Append(@"if (!r.IsDBNull(");
+				buffer.Append(i);
+				buffer.Append(@")");
+				buffer.Append(@")");
+				buffer.AppendLine(@"{");
+				buffer.Append(parameter.Name);
+				buffer.Append(@" = ");
+				AppendReaderGetValue(buffer, property, i, fields);
+				buffer.Append(Semicolumn);
+				buffer.AppendLine(@"}");
+			}
 
-		//private static void AppendFillMethod(StringBuilder buffer, ClrClass @class, string query)
-		//{
-		//	buffer.Append(@"public void Fill(");
-		//	buffer.Append(@"Dictionary<long, ");
-		//	buffer.Append(@class.Name);
-		//	buffer.AppendLine(@"> items) {");
-		//	AppendCheck(buffer, @"items");
-		//	buffer.AppendLine();
-		//	buffer.Append(@"var query = """);
-		//	buffer.Append(query);
-		//	buffer.AppendLine(@""";");
-		//	buffer.Append(@"QueryHelper.Fill(items, query, this.Creator");
-		//	buffer.AppendLine(@", this.Selector);");
-		//	buffer.AppendLine(@"}");
-		//	buffer.AppendLine();
-		//}
+			buffer.Append(@"return new ");
+			buffer.Append(name);
+			if (readOnly)
+			{
+				buffer.Append(@"(");
+				foreach (var parameter in parameters)
+				{
+					buffer.Append(parameter.Name);
+					buffer.Append(Comma);
+				}
+				buffer[buffer.Length - 1] = ')';
+			}
+			else
+			{
+				buffer.Append(@"{");
+				for (var i = 0; i < properties.Length; i++)
+				{
+					buffer.Append(properties[i].Name);
+					buffer.Append(@" = ");
+					buffer.Append(parameters[i].Name);
+					buffer.Append(Comma);
+				}
+				buffer[buffer.Length - 1] = '}';
+			}
+			buffer.AppendLine(@";");
+			buffer.AppendLine(@"}");
+		}
 
-		//private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, bool readOnly, List<DictionaryField> dictionaryFields)
-		//{
-		//	var name = @class.Name;
-		//	buffer.Append(@"private ");
-		//	buffer.Append(name);
-		//	buffer.AppendLine(@" Creator(IDataReader r)");
-		//	buffer.AppendLine(@"{");
+		private static void AppendReaderGetValue(StringBuilder buffer, ClrProperty property, int index, IEnumerable<ClrField> fields)
+		{
+			var type = property.Type;
+			if (type.IsBuiltIn)
+			{
+				AppendReaderGetValue(buffer, type, index);
+			}
+			else
+			{
+				foreach (var field in fields)
+				{
+					if (field.Property == property)
+					{
+						buffer.Append(field.Name);
+						break;
+					}
+				}
+				buffer.Append(@"[");
+				AppendReaderGetValue(buffer, ClrType.Long, index);
+				buffer.Append(@"]");
+			}
+		}
 
-		//	var properties = @class.Properties;
-		//	for (var index = 0; index < properties.Length; index++)
-		//	{
-		//		var property = properties[index];
+		private static void AppendReaderGetValue(StringBuilder buffer, ClrType type, int index)
+		{
+			buffer.Append(@"r.");
+			buffer.Append(type.ReaderMethod);
+			buffer.Append(@"(");
+			buffer.Append(index);
+			buffer.Append(@")");
+		}
 
-		//		buffer.Append(@"var ");
-		//		var parameterName = ParameterNameProvider.GetParameterName(property);
-		//		buffer.Append(parameterName);
-		//		buffer.Append(@" = ");
-		//		buffer.Append(DefaultValueProvider.GetDefaultValue(property));
-		//		buffer.AppendLine(@";");
-		//		buffer.Append(@"if (!r.IsDBNull(");
-		//		buffer.Append(index);
-		//		buffer.AppendLine(@")){");
-		//		buffer.Append(parameterName);
-		//		buffer.Append(@" = ");
-		//		AppendDataReaderValue(buffer, property, index, dictionaryFields);
-		//		buffer.AppendLine(@";}");
-		//	}
+		private static void AppendSelectorMethod(StringBuilder buffer, ClrClass @class)
+		{
+			buffer.AppendLine();
 
-		//	buffer.Append(@"return new ");
-		//	buffer.Append(name);
-		//	if (readOnly)
-		//	{
-		//		buffer.Append(@"(");
-		//		foreach (var property in @class.Properties)
-		//		{
-		//			buffer.Append(ParameterNameProvider.GetParameterName(property));
-		//			buffer.Append(',');
-		//		}
-		//		buffer[buffer.Length - 1] = ')';
-		//	}
-		//	else
-		//	{
-		//		buffer.Append(@"{");
-		//		foreach (var property in @class.Properties)
-		//		{
-		//			buffer.Append(property.Name);
-		//			buffer.Append(@" = ");
-		//			buffer.Append(ParameterNameProvider.GetParameterName(property));
-		//			buffer.Append(',');
-		//		}
-		//		buffer[buffer.Length - 1] = '}';
-		//	}
-		//	buffer.AppendLine(@";");
-		//	buffer.AppendLine(@"}");
-		//}
+			var name = @class.Name;
+			var varName = char.ToLowerInvariant(name[0]);
+			var primaryKeyProperty = default(ClrProperty);
+			foreach (var property in @class.Properties)
+			{
+				if (property.Type == ClrType.Long && property.Name.EndsWith(@"Id"))
+				{
+					primaryKeyProperty = property;
+					break;
+				}
+			}
 
-		//private static void AppendDataReaderValue(StringBuilder buffer, ClrProperty property, int index, IEnumerable<DictionaryField> dictionaryFields)
-		//{
-		//	if (buffer == null) throw new ArgumentNullException("buffer");
-		//	if (property == null) throw new ArgumentNullException("property");
-
-		//	var type = property.Type;
-		//	if (type.IsBuiltIn)
-		//	{
-		//		AppendDataReaderValue(buffer, type, index);
-		//		return;
-		//	}
-		//	buffer.Append(@"_");
-		//	foreach (var dictionaryField in dictionaryFields)
-		//	{
-		//		if (dictionaryField.Property == property)
-		//		{
-		//			buffer.Append(dictionaryField.Name);
-		//			break;
-		//		}
-		//	}
-		//	buffer.Append(@"[");
-		//	AppendDataReaderValue(buffer, ClrType.Integer, index);
-		//	buffer.Append(@"]");
-		//}
-
-		//private static void AppendDataReaderValue(StringBuilder buffer, ClrType type, int index)
-		//{
-		//	buffer.Append(@"r.");
-		//	buffer.Append(GetReaderMethod(type));
-		//	buffer.Append(@"(");
-		//	buffer.Append(index);
-		//	buffer.Append(@")");
-		//}
-
-		//private static void AppendSelectorMethod(StringBuilder buffer, ClrClass @class)
-		//{
-		//	buffer.AppendLine();
-
-		//	var name = @class.Name;
-		//	var varName = char.ToLowerInvariant(name[0]);
-		//	var primaryKeyProperty = default(ClrProperty);
-		//	foreach (var property in @class.Properties)
-		//	{
-		//		if (property.Type == ClrType.Integer && property.Name.EndsWith(@"Id"))
-		//		{
-		//			primaryKeyProperty = property;
-		//			break;
-		//		}
-		//	}
-
-		//	buffer.Append(@"private long Selector(");
-		//	buffer.Append(name);
-		//	buffer.Append(@" ");
-		//	buffer.Append(varName);
-		//	buffer.Append(@") { return ");
-		//	buffer.Append(varName);
-		//	buffer.Append(@".");
-		//	buffer.Append(primaryKeyProperty.Name);
-		//	buffer.Append(@";}");
-		//	buffer.AppendLine();
-		//}
-
-		//private static string GetReaderMethod(ClrType type)
-		//{
-		//	if (type == ClrType.Integer)
-		//	{
-		//		return @"GetInt64";
-		//	}
-		//	if (type == ClrType.String)
-		//	{
-		//		return @"GetString";
-		//	}
-		//	if (type == ClrType.Decimal)
-		//	{
-		//		return @"GetDecimal";
-		//	}
-		//	if (type == ClrType.DateTime)
-		//	{
-		//		return @"GetDateTime";
-		//	}
-		//	if (type == ClrType.Bytes)
-		//	{
-		//		return @"GetBytes";
-		//	}
-		//	return string.Empty;
-		//}
-
-
-
-
+			buffer.Append(@"private long Selector(");
+			buffer.Append(name);
+			buffer.Append(Space);
+			buffer.Append(varName);
+			buffer.Append(@") { return ");
+			buffer.Append(varName);
+			buffer.Append(@".");
+			buffer.Append(primaryKeyProperty.Name);
+			buffer.Append(@";}");
+			buffer.AppendLine();
+		}
 
 		private static string GetIsReadOnly(bool isReadOnly)
 		{
@@ -600,7 +572,11 @@ namespace AppBuilder
 
 		private static void AppendCheck(StringBuilder buffer, ClrParameter parameter)
 		{
-			var name = parameter.Name;
+			AppendCheck(buffer, parameter.Name);
+		}
+
+		private static void AppendCheck(StringBuilder buffer, string name)
+		{
 			buffer.Append(@"if (");
 			buffer.Append(name);
 			buffer.Append(@" == null) throw new ArgumentNullException(""");
@@ -629,8 +605,8 @@ namespace AppBuilder
 			var parameters = new ClrParameter[properties.Count];
 			for (var i = 0; i < properties.Count; i++)
 			{
-				var p = properties[i];
-				parameters[i] = new ClrParameter(p.Type, p.Name);
+				var property = properties[i];
+				parameters[i] = new ClrParameter(property.Type, property.Name);
 			}
 			return parameters;
 		}

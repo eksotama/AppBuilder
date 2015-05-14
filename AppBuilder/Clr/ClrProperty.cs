@@ -23,11 +23,6 @@ namespace AppBuilder.Clr
 			return Create(type, name, ClrField.AutoProperty);
 		}
 
-		//public static ClrProperty CreateImmutable(ClrType type, string name)
-		//{
-		//	return Create(type, name, ClrField.ImmutableAutoProperty);
-		//}
-
 		private static ClrProperty Create(ClrType type, string name, ClrField field)
 		{
 			if (type == null) throw new ArgumentNullException("type");
