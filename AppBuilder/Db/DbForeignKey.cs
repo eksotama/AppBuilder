@@ -14,8 +14,8 @@ namespace AppBuilder.Db
 			if (table == string.Empty) throw new ArgumentOutOfRangeException("table");
 			if (column == string.Empty) throw new ArgumentOutOfRangeException("column");
 
-			this.Table = table;
-			this.Column = column;
+			this.Table = NameProvider.ToTableName(table);
+			this.Column = NameProvider.ToColumnName(column);
 		}
 	}
 }

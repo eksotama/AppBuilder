@@ -58,12 +58,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Clr\ClrClass.cs" />
-    <Compile Include="CodeGenerator.cs" />
+    <Compile Include="ClrCodeGenerator.cs" />
     <Compile Include="Clr\ClrContructor.cs" />
     <Compile Include="Clr\ClrField.cs" />
     <Compile Include="Clr\ClrParameter.cs" />
     <Compile Include="Clr\ClrProperty.cs" />
     <Compile Include="Clr\ClrType.cs" />
+    <Compile Include="DbScriptGenerator.cs" />
     <Compile Include="DbTableConverter.cs" />
     <Compile Include="Db\DbColumn.cs" />
     <Compile Include="Db\DbColumnType.cs" />

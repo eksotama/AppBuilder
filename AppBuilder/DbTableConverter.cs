@@ -7,7 +7,7 @@ namespace AppBuilder
 {
 	public static class DbTableConverter
 	{
-		public static ClrClass ToClassDefinition(DbTable table, NameProvider nameProvider)
+		public static ClrClass ToClrClass(DbTable table, NameProvider nameProvider)
 		{
 			if (table == null) throw new ArgumentNullException("table");
 			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
@@ -28,7 +28,7 @@ namespace AppBuilder
 				var type = GetClrType(column.Type);
 				if (foreignKey != null)
 				{
-					type = new ClrType(nameProvider.GetClassName(foreignKey.Table));
+					type = new ClrType(nameProvider.GetClassName(foreignKey.Table), !column.AllowNull);
 				}
 				properties[index] = new ClrProperty(type, name, ClrField.AutoProperty);
 			}
@@ -42,7 +42,7 @@ namespace AppBuilder
 			{
 				return ClrType.Long;
 			}
-			if (type == DbColumnType.String)
+			if (type == DbColumnType.String || type.Name == DbColumnType.String.Name)
 			{
 				return ClrType.String;
 			}

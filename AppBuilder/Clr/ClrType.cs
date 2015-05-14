@@ -11,17 +11,17 @@ namespace AppBuilder.Clr
 		public static readonly ClrType Bytes = new ClrType(@"byte[]", false, @"default(byte[])", @"GetBytes");
 
 		public string Name { get; private set; }
-		public bool IsReference { get; private set; }
+		public bool CheckValue { get; private set; }
 		public bool IsBuiltIn { get; private set; }
 		public string DefaultValue { get; private set; }
 		public string ReaderMethod { get; private set; }
 
-		public ClrType(string name)
+		public ClrType(string name, bool checkValue)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
 			this.Name = name;
-			this.IsReference = true;
+			this.CheckValue = checkValue;
 			this.DefaultValue = string.Format(@"default({0})", name);
 			this.ReaderMethod = @"GetInt64";
 		}
@@ -33,7 +33,7 @@ namespace AppBuilder.Clr
 			if (readerMethod == null) throw new ArgumentNullException("readerMethod");
 
 			this.Name = name;
-			this.IsReference = isReference;
+			this.CheckValue = isReference;
 			this.IsBuiltIn = true;
 			this.DefaultValue = defaultValue;
 			this.ReaderMethod = readerMethod;

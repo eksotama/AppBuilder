@@ -19,8 +19,10 @@ namespace AppBuilder.Db
 			return tables;
 		}
 
-		private static DbTable Parse(string tableSchema)
+		public static DbTable Parse(string tableSchema)
 		{
+			if (tableSchema == null) throw new ArgumentNullException("tableSchema");
+
 			var input = StringUtils.NormalizeTableSchema(tableSchema);
 			var tableName = StringUtils.ExtractBetween(input, @"CREATE TABLE", @"(").Trim();
 
@@ -28,9 +30,11 @@ namespace AppBuilder.Db
 			foreach (var definition in GetColumnDefinitions(StringUtils.ExtractBetweenGreedy(input, @"(", @")")))
 			{
 				var value = definition.Trim();
-				var columnName = StringUtils.ExtractBetween(value, @"FOREIGN KEY (", @")");
+				var columnName = StringUtils.ExtractBetween(value, @"FOREIGN KEY", @")");
 				if (columnName != string.Empty)
 				{
+					columnName = columnName.Trim().Substring(1);
+
 					var foreignKey = ParseForeignKey(value);
 					foreach (var column in columns)
 					{
@@ -97,7 +101,7 @@ namespace AppBuilder.Db
 			var type = ParseColumnType(StringUtils.ExtractBetween(input, @" ", @" "));
 			var allowNull = input.IndexOf(@"NOT NULL", StringComparison.OrdinalIgnoreCase) < 0;
 			var isPrimaryKey = input.IndexOf(@"PRIMARY KEY", StringComparison.OrdinalIgnoreCase) >= 0;
-			return new DbColumn(type, name, allowNull: allowNull, isPrimaryKey: isPrimaryKey);
+			return new DbColumn(type, name, allowNull, isPrimaryKey);
 		}
 
 		private static DbColumnType ParseColumnType(string input)
@@ -106,9 +110,19 @@ namespace AppBuilder.Db
 			{
 				return DbColumnType.Integer;
 			}
-			if (input.StartsWith(@"CHAR(", StringComparison.OrdinalIgnoreCase))
+			if (input.StartsWith(@"TEXT", StringComparison.OrdinalIgnoreCase))
 			{
-				return DbColumnType.GetString(int.Parse(StringUtils.ExtractBetween(input, @"(", @")")));
+				var length = default(int?);
+				var value = StringUtils.ExtractBetween(input, @"(", @")");
+				if (value != string.Empty)
+				{
+					int number;
+					if (int.TryParse(value, out number))
+					{
+						length = number;
+					}
+				}
+				return DbColumnType.GetString(length);
 			}
 			if (input.Equals(@"BLOB", StringComparison.OrdinalIgnoreCase))
 			{

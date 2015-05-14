@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using AppBuilder.Clr;
 using AppBuilder.Db;
@@ -7,7 +8,7 @@ using AppBuilder.Db.Providers;
 
 namespace AppBuilder
 {
-	public static class CodeGenerator
+	public static class ClrCodeGenerator
 	{
 		private static readonly char Space = ' ';
 		private static readonly char Comma = ',';
@@ -50,14 +51,6 @@ namespace AppBuilder
 
 			buffer.AppendLine(@"{");
 
-			if (@class.Fields.Count > 0)
-			{
-				foreach (var field in @class.Fields)
-				{
-					buffer.AppendLine(GetField(field));
-				}
-				buffer.AppendLine();
-			}
 			var properties = @class.Properties;
 			if (properties.Length > 0)
 			{
@@ -77,7 +70,7 @@ namespace AppBuilder
 			{
 				contructor = new ClrContructor(@class.Name, properties);
 			}
-			buffer.AppendLine(GetContructor(contructor));
+			buffer.Append(GetContructor(contructor));
 			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
@@ -157,18 +150,29 @@ namespace AppBuilder
 			buffer.Append(@class.Name);
 			buffer.Append(@"Adapter");
 			buffer.AppendLine(@"{");
-			buffer.Append(@"void Fill(");
-			buffer.Append(@"Dictionary<long, ");
-			buffer.Append(@class.Name);
-			buffer.Append(@"> ");
-			buffer.Append(StringUtils.LowerFirst(nameProvider.GetDbName(@class.Name)));
-			buffer.Append(@");");
+			if (@class.Properties.All(p => p.Type.IsBuiltIn))
+			{
+				buffer.Append(@"void Fill(");
+				buffer.Append(@"Dictionary<long, ");
+				buffer.Append(@class.Name);
+				buffer.Append(@"> ");
+				buffer.Append(StringUtils.LowerFirst(nameProvider.GetDbName(@class.Name)));
+				buffer.Append(@");");
+			}
+			else
+			{
+				buffer.Append(@"List<");
+				buffer.Append(@class.Name);
+				buffer.Append(@"> ");
+				buffer.Append(@"GetAll();");
+			}
+
 			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
 		}
 
-		public static string GetAdapter(ClrClass @class, NameProvider nameProvider, bool readOnly, DbTable table)
+		public static string GetAdapter(ClrClass @class, NameProvider nameProvider, bool immutable, DbTable table)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
@@ -192,10 +196,17 @@ namespace AppBuilder
 			if (fields.Length > 0)
 			{
 				AppendConstructor(buffer, @class, fields);
+				AppendGetMethod(buffer, @class, QueryProvider.GetSelect(table));
 			}
-			AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
-			AppendCreatorMethod(buffer, @class, readOnly, fields);
-			AppendSelectorMethod(buffer, @class);
+			else
+			{
+				AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
+			}
+			AppendCreatorMethod(buffer, @class, immutable, fields);
+			if (fields.Length == 0)
+			{
+				AppendSelectorMethod(buffer, @class);
+			}
 			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
@@ -316,7 +327,23 @@ namespace AppBuilder
 			buffer.AppendLine();
 		}
 
-		private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, bool readOnly, ClrField[] fields)
+		private static void AppendGetMethod(StringBuilder buffer, ClrClass @class, string query)
+		{
+			buffer.Append(@"public");
+			buffer.Append(Space);
+			buffer.Append(@"List<");
+			buffer.Append(@class.Name);
+			buffer.Append(@"> GetAll()");
+			buffer.AppendLine(@"{");
+			buffer.Append(@"var query = """);
+			buffer.Append(query);
+			buffer.AppendLine(@""";");
+			buffer.AppendLine(@"return QueryHelper.Get(query, this.Creator);");
+			buffer.AppendLine(@"}");
+			buffer.AppendLine();
+		}
+
+		private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, bool immutable, ClrField[] fields)
 		{
 			var name = @class.Name;
 			buffer.Append(@"private");
@@ -352,7 +379,7 @@ namespace AppBuilder
 
 			buffer.Append(@"return new ");
 			buffer.Append(name);
-			if (readOnly)
+			if (immutable)
 			{
 				buffer.Append(@"(");
 				foreach (var parameter in parameters)
@@ -438,52 +465,9 @@ namespace AppBuilder
 			buffer.AppendLine();
 		}
 
-		private static string GetIsReadOnly(bool isReadOnly)
-		{
-			return isReadOnly ? @"readonly" : string.Empty;
-		}
-
 		private static string GetIsSealed(bool isSealed)
 		{
 			return isSealed ? @"sealed" : string.Empty;
-		}
-
-		private static string GetField(ClrField field)
-		{
-			if (field == null) throw new ArgumentNullException("field");
-
-			var buffer = new StringBuilder();
-
-			buffer.Append(@"private");
-			buffer.Append(Space);
-			AppendReadOnly(field, buffer);
-			buffer.Append(field.Type.Name);
-			buffer.Append(Space);
-			buffer.Append(field.Name);
-			AppendInitialValue(field, buffer);
-			buffer.Append(Semicolumn);
-
-			return buffer.ToString();
-		}
-
-		private static void AppendInitialValue(ClrField field, StringBuilder buffer)
-		{
-			var initialValue = field.InitialValue;
-			if (initialValue != string.Empty)
-			{
-				buffer.Append(@" = ");
-				buffer.Append(initialValue);
-			}
-		}
-
-		private static void AppendReadOnly(ClrField field, StringBuilder buffer)
-		{
-			var readOnly = GetIsReadOnly(field.IsReadOnly);
-			if (readOnly != string.Empty)
-			{
-				buffer.Append(readOnly);
-				buffer.Append(Space);
-			}
 		}
 
 		private static string GetProperty(ClrProperty property, bool immutable)
@@ -503,16 +487,16 @@ namespace AppBuilder
 			return buffer.ToString();
 		}
 
-		private static string GetContructor(ClrContructor definition)
+		private static string GetContructor(ClrContructor contructor)
 		{
 			var buffer = new StringBuilder();
 
 			buffer.Append(@"public");
 			buffer.Append(Space);
-			buffer.Append(definition.Name);
+			buffer.Append(contructor.Name);
 			buffer.Append('(');
 			var addSeparator = false;
-			foreach (var parameter in definition.Parameters)
+			foreach (var parameter in contructor.Parameters)
 			{
 				if (addSeparator)
 				{
@@ -526,9 +510,9 @@ namespace AppBuilder
 			buffer.AppendLine(@"{");
 
 			var hasChecks = false;
-			foreach (var parameter in definition.Parameters)
+			foreach (var parameter in contructor.Parameters)
 			{
-				if (parameter.Type.IsReference)
+				if (parameter.Type.CheckValue)
 				{
 					AppendCheck(buffer, parameter);
 					hasChecks = true;
@@ -538,11 +522,11 @@ namespace AppBuilder
 			{
 				buffer.AppendLine();
 			}
-			foreach (var parameter in definition.Parameters)
+			foreach (var parameter in contructor.Parameters)
 			{
 				AppendPropertyAssignment(buffer, parameter);
 			}
-			foreach (var parameter in definition.Properties)
+			foreach (var parameter in contructor.Properties)
 			{
 				AppendPropertyInitialization(buffer, parameter);
 			}

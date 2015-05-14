@@ -16,7 +16,7 @@ namespace AppBuilder.Db
 			if (name == null) throw new ArgumentNullException("name");
 			if (name.Length == 0) throw new ArgumentOutOfRangeException("name");
 
-			this.Name = name;
+			this.Name = NameProvider.ToColumnName(name);
 			this.Type = type;
 			this.AllowNull = allowNull;
 			this.IsPrimaryKey = isPrimaryKey;

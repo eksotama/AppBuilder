@@ -5,7 +5,7 @@ namespace AppBuilder.Db
 	public sealed class DbColumnType
 	{
 		public readonly static DbColumnType Integer = new DbColumnType(@"INTEGER");
-		public readonly static DbColumnType String = new DbColumnType(@"STRING");
+		public readonly static DbColumnType String = new DbColumnType(@"TEXT");
 		public readonly static DbColumnType Decimal = new DbColumnType(@"DECIMAL");
 		public readonly static DbColumnType DateTime = new DbColumnType(@"DATETIME");
 		public readonly static DbColumnType Bytes = new DbColumnType(@"BLOB");
@@ -21,9 +21,9 @@ namespace AppBuilder.Db
 			this.Length = length;
 		}
 
-		public static DbColumnType GetString(int length)
+		public static DbColumnType GetString(int? length)
 		{
-			return new DbColumnType(@"STRING", length);
+			return new DbColumnType(@"TEXT", length);
 		}
 	}
 }

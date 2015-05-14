@@ -129,6 +129,20 @@ namespace AppBuilder
 			return upper + name.Substring(1);
 		}
 
+		public static string ToTableName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return ToUpperFirst(name);
+		}
+
+		public static string ToColumnName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return ToUpperFirst(name);
+		}
+
 		private static string ToUpperFirst(string name)
 		{
 			var first = name[0];

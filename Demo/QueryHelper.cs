@@ -81,29 +81,6 @@ namespace Demo
 			return items;
 		}
 
-		public static void Fill<T>(List<T> items, string query, Func<IDataReader, T> creator)
-		{
-			if (items == null) throw new ArgumentNullException("items");
-			if (query == null) throw new ArgumentNullException("query");
-			if (creator == null) throw new ArgumentNullException("creator");
-
-			items.Clear();
-
-			using (var cmd = Connection.CreateCommand())
-			{
-				cmd.CommandType = CommandType.Text;
-				cmd.CommandText = query;
-
-				using (var r = cmd.ExecuteReader())
-				{
-					while (r.Read())
-					{
-						items.Add(creator(r));
-					}
-				}
-			}
-		}
-
 		public static void Fill<T>(Dictionary<long, T> items, string query, Func<IDataReader, T> creator, Func<T, long> selector)
 		{
 			if (items == null) throw new ArgumentNullException("items");

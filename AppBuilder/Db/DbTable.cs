@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 
 namespace AppBuilder.Db
 {
@@ -15,7 +14,7 @@ namespace AppBuilder.Db
 			if (name == string.Empty) throw new ArgumentOutOfRangeException("name");
 			if (columns.Length == 0) throw new ArgumentOutOfRangeException("columns");
 
-			this.Name = name;
+			this.Name = NameProvider.ToTableName(name);
 			this.Columns = columns;
 		}
 	}
