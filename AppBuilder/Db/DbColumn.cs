@@ -58,11 +58,11 @@ namespace AppBuilder.Db
 			throw new Exception(@"No Primary Key column.");
 		}
 
-		public static DbColumn NullableInteger(string name)
+		public static DbColumn Integer(string name, bool allowNull = false)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
-			return new DbColumn(DbColumnType.Integer, name, true);
+			return new DbColumn(DbColumnType.Integer, name, allowNull);
 		}
 
 		public static DbColumn String(string name, bool allowNull = false)

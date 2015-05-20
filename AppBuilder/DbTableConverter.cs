@@ -93,7 +93,7 @@ namespace AppBuilder
 			{
 				return ClrType.Bytes;
 			}
-			return ClrType.Long;
+			throw new Exception(@"Unsupported DbColumnType:" + type);
 		}
 	}
 }

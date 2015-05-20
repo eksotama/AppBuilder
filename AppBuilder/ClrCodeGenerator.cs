@@ -14,7 +14,7 @@ namespace AppBuilder
 		private static readonly char Comma = ',';
 		private static readonly char Semicolumn = ';';
 
-		public static string GetClass(ClrClass @class, bool immutable)
+		public static string GetClassCode(ClrClass @class)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 
@@ -56,27 +56,18 @@ namespace AppBuilder
 			{
 				foreach (var property in properties)
 				{
-					buffer.AppendLine(GetProperty(property, immutable));
+					buffer.AppendLine(GetProperty(property));
 				}
 				buffer.AppendLine();
 			}
 
-			ClrContructor contructor;
-			if (immutable)
-			{
-				contructor = new ClrContructor(@class.Name, GetParameters(properties));
-			}
-			else
-			{
-				contructor = new ClrContructor(@class.Name, properties);
-			}
-			buffer.Append(GetContructor(contructor));
+			buffer.Append(GetContructor(new ClrContructor(@class.Name, GetParameters(properties))));
 			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
 		}
 
-		public static string GetHelper(ClrClass @class, NameProvider nameProvider)
+		public static string GetHelperCode(ClrClass @class, NameProvider nameProvider)
 		{
 			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
 			if (@class == null) throw new ArgumentNullException("class");
@@ -172,7 +163,7 @@ namespace AppBuilder
 			return buffer.ToString();
 		}
 
-		public static string GetAdapter(ClrClass @class, NameProvider nameProvider, bool immutable, DbTable table)
+		public static string GetAdapter(ClrClass @class, NameProvider nameProvider, DbTable table)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
@@ -202,7 +193,7 @@ namespace AppBuilder
 			{
 				AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
 			}
-			AppendCreatorMethod(buffer, @class, immutable, fields);
+			AppendCreatorMethod(buffer, @class, fields);
 			if (fields.Length == 0)
 			{
 				AppendSelectorMethod(buffer, @class);
@@ -319,7 +310,7 @@ namespace AppBuilder
 			buffer.AppendLine(@"{");
 			AppendCheck(buffer, @"items");
 			buffer.AppendLine();
-			buffer.Append(@"var query = """);
+			buffer.Append(@"var query = @""");
 			buffer.Append(query);
 			buffer.AppendLine(@""";");
 			buffer.AppendLine(@"QueryHelper.Fill(items, query, this.Creator, this.Selector);");
@@ -335,7 +326,7 @@ namespace AppBuilder
 			buffer.Append(@class.Name);
 			buffer.Append(@"> GetAll()");
 			buffer.AppendLine(@"{");
-			buffer.Append(@"var query = """);
+			buffer.Append(@"var query = @""");
 			buffer.Append(query);
 			buffer.AppendLine(@""";");
 			buffer.AppendLine(@"return QueryHelper.Get(query, this.Creator);");
@@ -343,7 +334,7 @@ namespace AppBuilder
 			buffer.AppendLine();
 		}
 
-		private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, bool immutable, ClrField[] fields)
+		private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, ClrField[] fields)
 		{
 			var name = @class.Name;
 			buffer.Append(@"private");
@@ -379,28 +370,13 @@ namespace AppBuilder
 
 			buffer.Append(@"return new ");
 			buffer.Append(name);
-			if (immutable)
+			buffer.Append(@"(");
+			foreach (var parameter in parameters)
 			{
-				buffer.Append(@"(");
-				foreach (var parameter in parameters)
-				{
-					buffer.Append(parameter.Name);
-					buffer.Append(Comma);
-				}
-				buffer[buffer.Length - 1] = ')';
+				buffer.Append(parameter.Name);
+				buffer.Append(Comma);
 			}
-			else
-			{
-				buffer.Append(@"{");
-				for (var i = 0; i < properties.Length; i++)
-				{
-					buffer.Append(properties[i].Name);
-					buffer.Append(@" = ");
-					buffer.Append(parameters[i].Name);
-					buffer.Append(Comma);
-				}
-				buffer[buffer.Length - 1] = '}';
-			}
+			buffer[buffer.Length - 1] = ')';
 			buffer.AppendLine(@";");
 			buffer.AppendLine(@"}");
 		}
@@ -470,7 +446,7 @@ namespace AppBuilder
 			return isSealed ? @"sealed" : string.Empty;
 		}
 
-		private static string GetProperty(ClrProperty property, bool immutable)
+		private static string GetProperty(ClrProperty property)
 		{
 			if (property == null) throw new ArgumentNullException("property");
 
@@ -482,7 +458,7 @@ namespace AppBuilder
 			buffer.Append(Space);
 			buffer.Append(property.Name);
 			buffer.Append(Space);
-			buffer.Append(GetBackingField(immutable));
+			buffer.Append(GetBackingField());
 
 			return buffer.ToString();
 		}
@@ -526,10 +502,6 @@ namespace AppBuilder
 			{
 				AppendPropertyAssignment(buffer, parameter);
 			}
-			foreach (var parameter in contructor.Properties)
-			{
-				AppendPropertyInitialization(buffer, parameter);
-			}
 			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
@@ -544,15 +516,6 @@ namespace AppBuilder
 			buffer[buffer.Length - name.Length] = upper;
 			buffer.Append(@" = ");
 			buffer.Append(name);
-			buffer.AppendLine(@";");
-		}
-
-		private static void AppendPropertyInitialization(StringBuilder buffer, ClrProperty parameter)
-		{
-			buffer.Append(@"this.");
-			buffer.Append(parameter.Name);
-			buffer.Append(@" = ");
-			buffer.Append(parameter.Type.DefaultValue);
 			buffer.AppendLine(@";");
 		}
 
@@ -581,9 +544,9 @@ namespace AppBuilder
 			buffer.Append(name);
 		}
 
-		private static string GetBackingField(bool immutable)
+		private static string GetBackingField()
 		{
-			return immutable ? @"{ get; private set; }" : @"{ get; set; }";
+			return @"{ get; private set; }";
 		}
 
 		private static ClrParameter[] GetParameters(IReadOnlyList<ClrProperty> properties)

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Security.Policy;
 using System.Text;
 using AppBuilder;
 using AppBuilder.Db;
@@ -28,16 +26,47 @@ namespace Demo
 			                                          {
 				                                          DbColumn.PrimaryKey(@"Id"),
 				                                          DbColumn.String(@"Name"),
+														  DbColumn.Decimal(@"Price"),
 			                                          });
 			var dbOrderDetails = new DbTable(@"OrderDetails", new[]
 															  {
 																  DbColumn.PrimaryKey(@"Id"),
-																  //DbColumn.String(@"Name"),
-																  DbColumn.ForeignKey(@"ProductId", dbProducts),
-																  DbColumn.Decimal(@"Price"),
+																  DbColumn.Integer(@"Quantity"),
+																  DbColumn.ForeignKey(@"ProductId", dbProducts),																  
 																  DbColumn.ForeignKey(@"OrderId", dbOrders),
 															  });
 
+			var schema = new DbSchema(@"iFSA", new[]
+			                                   {
+				                                   dbOrderTypes,
+				                                   dbOrders,
+				                                   dbProducts,
+				                                   dbOrderDetails
+			                                   });
+			var nameProvider = new NameProvider();
+
+			var code = new StringBuilder(2048);
+			foreach (var table in schema.Tables)
+			{
+				var @class = DbTableConverter.ToClrClass(table, nameProvider, schema.Tables);
+
+				if (table.Name == dbOrders.Name)
+				{
+					var adapter = ClrCodeGenerator.GetAdapter(@class, nameProvider, table);
+					Console.WriteLine(adapter);
+
+					code.AppendLine(adapter);
+					code.AppendLine();
+					code.AppendLine();	
+				}
+				
+			}
+
+			File.WriteAllText(@"C:\temp\obj.cs", code.ToString());
+
+			
+			//Builder.Generate(schema, nameProvider, new DirectoryInfo(@"C:\temp\app\"));
+			//File.WriteAllText(@"C:\temp\schema.sql", DbSchemaGenerator.Generate(schema));
 
 
 
@@ -60,63 +89,47 @@ namespace Demo
 			//											  DbColumn.ForeignKey(@"FlavourId", dbFlavours),
 			//										  });
 
-			var code = new StringBuilder(1024);
-			var sql = new StringBuilder(1024);
+			//var code = new StringBuilder(1024);
+			//var sql = new StringBuilder(1024);
+			//var nameProvider = new NameProvider();
 
-			var nameProvider = new NameProvider();
-			nameProvider.AddOverride(@"Categories", @"Category");
-			nameProvider.AddOverride(@"Activities", @"Activity");
+			//foreach (var ddl in tables)
+			//{
+			//	var schema = DbScriptGenerator.GetCreateTable(ddl);
+			//	var table = DbSchemaParser.Parse(schema);
+			//	sql.AppendLine(schema);
+			//	sql.AppendLine();
+			//	sql.AppendLine();
 
-			var tables = new[]
-			             {
-							 dbOrderTypes, dbOrders, dbOrderDetails, dbProducts
-							 //dbBrands, dbFlavours, dbProducts
-			             };
-			foreach (var ddl in tables)
-			{
-				var schema = DbScriptGenerator.GetCreateTable(ddl);
-				var table = DbSchemaParser.Parse(schema);
-				sql.AppendLine(schema);
-				sql.AppendLine();
-				sql.AppendLine();
 
-				
-				var immutable = true;
-				var clrClass = DbTableConverter.ToClrClass(table, nameProvider, tables);
+			//	var clrClass = DbTableConverter.ToClrClass(table, nameProvider, tables);
 
-				//if (table.Name.Equals(dbOrders.Name))
-				//{
-				//	var newProperties = new List<ClrProperty>(clrClass.Properties);
-				//	newProperties.Add(ClrProperty.Auto((new ClrType(@"List<OrderDetails>", true)), @"Details"));
-				//	clrClass.Properties = newProperties.ToArray();
-				//}
+			//	code.AppendLine(ClrCodeGenerator.GetClass(clrClass));
+			//	code.AppendLine();
+			//	code.AppendLine();
+			//	code.AppendLine();
 
-				code.AppendLine(ClrCodeGenerator.GetClass(clrClass, immutable));
-				code.AppendLine();
-				code.AppendLine();
-				code.AppendLine();
+			//	//code.AppendLine(ClrCodeGenerator.GetAdapterInterface(clrClass, nameProvider));
+			//	//code.AppendLine();
+			//	//code.AppendLine();
+			//	//code.AppendLine();
 
-				//code.AppendLine(ClrCodeGenerator.GetAdapterInterface(clrClass, nameProvider));
-				//code.AppendLine();
-				//code.AppendLine();
-				//code.AppendLine();
+			//	//code.AppendLine(ClrCodeGenerator.GetAdapter(clrClass, nameProvider, immutable, table));
+			//	//code.AppendLine();
+			//	//code.AppendLine();
+			//	//code.AppendLine();
 
-				//code.AppendLine(ClrCodeGenerator.GetAdapter(clrClass, nameProvider, immutable, table));
-				//code.AppendLine();
-				//code.AppendLine();
-				//code.AppendLine();
+			//	//if (table.Columns.All(c => c.DbForeignKey != null))
+			//	//{
+			//	//	code.AppendLine(ClrCodeGenerator.GetHelper(clrClass, nameProvider));
+			//	//	code.AppendLine();
+			//	//	code.AppendLine();
+			//	//	code.AppendLine();
+			//	//}
+			//}
 
-				//if (table.Columns.All(c => c.DbForeignKey != null))
-				//{
-				//	code.AppendLine(ClrCodeGenerator.GetHelper(clrClass, nameProvider));
-				//	code.AppendLine();
-				//	code.AppendLine();
-				//	code.AppendLine();
-				//}
-			}
-
-			File.WriteAllText(@"C:\temp\obj.cs", code.ToString());
-			File.WriteAllText(@"C:\temp\schema.sql", sql.ToString());
+			//File.WriteAllText(@"C:\temp\obj.cs", code.ToString());
+			//File.WriteAllText(@"C:\temp\schema.sql", sql.ToString());
 		}
 
 	}

@@ -4,14 +4,25 @@ using AppBuilder.Db;
 
 namespace AppBuilder
 {
-	public static class DbScriptGenerator
+	public static class DbSchemaGenerator
 	{
-		public static string GetCreateTable(DbTable table)
+		public static string Generate(DbSchema schema)
 		{
-			if (table == null) throw new ArgumentNullException("table");
+			if (schema == null) throw new ArgumentNullException("schema");
 
-			var buffer = new StringBuilder(2014);
+			var buffer = new StringBuilder(1024);
 
+			foreach (var table in schema.Tables)
+			{
+				Generate(table, buffer);
+				buffer.AppendLine();
+			}
+
+			return buffer.ToString();
+		}
+
+		private static void Generate(DbTable table, StringBuilder buffer)
+		{
 			buffer.Append(@"CREATE TABLE");
 			buffer.Append(' ');
 			buffer.Append('[');
@@ -40,8 +51,6 @@ namespace AppBuilder
 			}
 			buffer.AppendLine();
 			buffer.AppendLine(@")");
-
-			return buffer.ToString();
 		}
 
 		private static void AppendColumn(StringBuilder buffer, DbColumn column)
