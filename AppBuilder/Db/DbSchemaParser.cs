@@ -36,11 +36,12 @@ namespace AppBuilder.Db
 					columnName = columnName.Trim().Substring(1);
 
 					var foreignKey = ParseForeignKey(value);
-					foreach (var column in columns)
+					for (var i = 0; i < columns.Count; i++)
 					{
+						var column = columns[i];
 						if (column.Name == columnName)
 						{
-							column.ForeignKey = foreignKey;
+							columns[i] = new DbColumn(column.Type, column.Name, foreignKey, column.AllowNull, column.IsPrimaryKey);
 							break;
 						}
 					}
