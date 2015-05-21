@@ -74,7 +74,7 @@
     <Compile Include="Db\DDL\DbTable.cs" />
     <Compile Include="Db\DML\DbQueryParameter.cs" />
     <Compile Include="Db\DML\DbQuery.cs" />
-    <Compile Include="Db\QueryProvider.cs" />
+    <Compile Include="Db\QueryCreator.cs" />
     <Compile Include="NameProvider.cs" />
     <Compile Include="Builder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
