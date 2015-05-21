@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using AppBuilder.Clr;
-using AppBuilder.Db;
+using AppBuilder.Db.DDL;
 
 namespace AppBuilder
 {
@@ -32,13 +32,13 @@ namespace AppBuilder
 				var type = GetClrType(column.Type);
 				if (foreignKey != null)
 				{
-					type = new ClrType(nameProvider.GetClassName(foreignKey.Table), !column.AllowNull);
+					type = new ClrType(nameProvider.GetClassName(foreignKey.Table), !column.AllowNull, false);
 
 					if (referencedTables.Count > 0)
 					{
 						var t = referencedTables[0];
 						var navigationType = nameProvider.GetClassName(t.Name);
-						navigationProperties.Add(new ClrProperty(new ClrType(string.Format(@"List<{0}>", navigationType), true), t.Name, ClrField.AutoProperty));
+						navigationProperties.Add(new ClrProperty(new ClrType(string.Format(@"List<{0}>", navigationType), true, true), t.Name, ClrField.AutoProperty));
 					}
 				}
 				properties.Add(new ClrProperty(type, name, ClrField.AutoProperty));

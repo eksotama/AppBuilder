@@ -1,6 +1,6 @@
 using System;
 
-namespace AppBuilder.Db
+namespace AppBuilder.Db.DDL
 {
 	public sealed class DbColumnType
 	{
@@ -23,7 +23,7 @@ namespace AppBuilder.Db
 
 		public static DbColumnType GetString(int? length)
 		{
-			return new DbColumnType(@"TEXT", length);
+			return new DbColumnType(String.Name, length);
 		}
 	}
 }

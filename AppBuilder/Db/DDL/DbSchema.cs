@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AppBuilder.Db
+namespace AppBuilder.Db.DDL
 {
 	public sealed class DbSchema
 	{
@@ -11,6 +11,7 @@ namespace AppBuilder.Db
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			if (tables == null) throw new ArgumentNullException("tables");
+			if (tables.Length == 0) throw new ArgumentOutOfRangeException("tables");
 
 			this.Name = name;
 			this.Tables = tables;

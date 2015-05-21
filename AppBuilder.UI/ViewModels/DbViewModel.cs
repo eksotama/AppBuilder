@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Data.SqlClient;
 using AppBuilder.Db;
+using AppBuilder.Db.DDL;
 using AppBuilder.UI.Data;
 
 namespace AppBuilder.UI.ViewModels

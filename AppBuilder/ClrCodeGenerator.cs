@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using AppBuilder.Clr;
 using AppBuilder.Db;
-using AppBuilder.Db.Providers;
+using AppBuilder.Db.DDL;
 
 namespace AppBuilder
 {
@@ -177,21 +177,22 @@ namespace AppBuilder
 			buffer.Append(@class.Name);
 			buffer.Append(@"Adapter");
 			buffer.Append(Space);
-			buffer.Append(':');
-			buffer.Append(Space);
-			buffer.Append('I');
-			buffer.Append(@class.Name);
-			buffer.Append(@"Adapter");
+			// TODO : TEMP disable
+			//buffer.Append(':');
+			//buffer.Append(Space);
+			//buffer.Append('I');
+			//buffer.Append(@class.Name);
+			//buffer.Append(@"Adapter");
 			buffer.AppendLine(@"{");
 			var fields = GetFileds(@class, nameProvider);
 			if (fields.Length > 0)
 			{
 				AppendConstructor(buffer, @class, fields);
-				AppendGetMethod(buffer, @class, QueryProvider.GetSelect(table));
+				//AppendGetMethod(buffer, @class, QueryProvider.GetSelect(table));
 			}
 			else
 			{
-				AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
+				//AppendFillMethod(buffer, @class, QueryProvider.GetSelect(table));
 			}
 			AppendCreatorMethod(buffer, @class, fields);
 			if (fields.Length == 0)
@@ -205,30 +206,18 @@ namespace AppBuilder
 
 		private static ClrField[] GetFileds(ClrClass @class, NameProvider nameProvider)
 		{
-			var totalFields = 0;
+			var fields = new List<ClrField>();
+
 			foreach (var property in @class.Properties)
 			{
 				var type = property.Type;
-				if (!type.IsBuiltIn)
+				if (!type.IsBuiltIn && !type.IsCollection)
 				{
-					totalFields++;
+					fields.Add(new ClrField(type, nameProvider.GetDbName(type.Name), property: property));
 				}
 			}
 
-			var fields = new ClrField[totalFields];
-			if (fields.Length > 0)
-			{
-				var i = 0;
-				foreach (var property in @class.Properties)
-				{
-					var type = property.Type;
-					if (!type.IsBuiltIn)
-					{
-						fields[i++] = new ClrField(type, nameProvider.GetDbName(type.Name), property: property);
-					}
-				}
-			}
-			return fields;
+			return fields.ToArray();
 		}
 
 		private static void AppendConstructor(StringBuilder buffer, ClrClass @class, ClrField[] fields)
@@ -390,6 +379,7 @@ namespace AppBuilder
 			}
 			else
 			{
+				// TODO : !!!
 				foreach (var field in fields)
 				{
 					if (field.Property == property)

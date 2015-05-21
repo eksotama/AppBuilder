@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using AppBuilder.Db;
+using AppBuilder.Db.DDL;
 
-namespace AppBuilder.Db
+namespace AppBuilder
 {
 	public static class DbSchemaParser
 	{
@@ -19,10 +21,8 @@ namespace AppBuilder.Db
 			return tables;
 		}
 
-		public static DbTable Parse(string tableSchema)
+		private static DbTable Parse(string tableSchema)
 		{
-			if (tableSchema == null) throw new ArgumentNullException("tableSchema");
-
 			var input = StringUtils.NormalizeTableSchema(tableSchema);
 			var tableName = StringUtils.ExtractBetween(input, @"CREATE TABLE", @"(").Trim();
 

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using AppBuilder.Db;
+using AppBuilder.Db.DDL;
 
 namespace AppBuilder
 {

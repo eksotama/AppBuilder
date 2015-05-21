@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Text;
+using AppBuilder.Db.DDL;
+using AppBuilder.Db.DML;
 
-namespace AppBuilder.Db.Providers
+namespace AppBuilder.Db
 {
 	public static class QueryProvider
 	{
-		public static string GetSelect(DbTable table)
+		public static DbQuery GetSelectQuery(DbTable table)
 		{
 			if (table == null) throw new ArgumentNullException("table");
 
@@ -26,7 +28,7 @@ namespace AppBuilder.Db.Providers
 			buffer.Append(@" FROM ");
 			buffer.Append(table.Name);
 
-			return buffer.ToString();
+			return new DbQuery(buffer.ToString());
 		}
 	}
 }

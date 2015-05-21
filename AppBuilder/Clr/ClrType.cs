@@ -13,10 +13,11 @@ namespace AppBuilder.Clr
 		public string Name { get; private set; }
 		public bool CheckValue { get; private set; }
 		public bool IsBuiltIn { get; private set; }
+		public bool IsCollection { get; private set; }
 		public string DefaultValue { get; private set; }
 		public string ReaderMethod { get; private set; }
 
-		public ClrType(string name, bool checkValue)
+		public ClrType(string name, bool checkValue, bool isCollection)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
@@ -24,6 +25,7 @@ namespace AppBuilder.Clr
 			this.CheckValue = checkValue;
 			this.DefaultValue = string.Format(@"default({0})", name);
 			this.ReaderMethod = @"GetInt64";
+			this.IsCollection = isCollection;
 		}
 
 		private ClrType(string name, bool isReference, string defaultValue, string readerMethod)

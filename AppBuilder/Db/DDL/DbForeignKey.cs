@@ -1,6 +1,6 @@
 using System;
 
-namespace AppBuilder.Db
+namespace AppBuilder.Db.DDL
 {
 	public sealed class DbForeignKey
 	{
