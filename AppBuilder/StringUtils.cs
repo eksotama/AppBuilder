@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace AppBuilder
 {
@@ -18,15 +17,6 @@ namespace AppBuilder
 			if (input == null) throw new ArgumentNullException("input");
 
 			return ApplyFirst(input, char.ToLowerInvariant);
-		}
-
-		public static void LowerFirst(StringBuilder buffer, string name)
-		{
-			if (buffer == null) throw new ArgumentNullException("buffer");
-			if (name == null) throw new ArgumentNullException("name");
-			if (name.Length == 0) throw new ArgumentOutOfRangeException("name");
-
-			ApplyFirst(buffer, name, char.ToLowerInvariant);
 		}
 
 		public static void UpperFirst(StringBuilder buffer, string name)
@@ -56,17 +46,13 @@ namespace AppBuilder
 			buffer[buffer.Length - name.Length] = f(name[0]);
 		}
 
-		public static string NormalizeTableSchema(string schema)
+		public static string RemoveBrackets(string schema)
 		{
 			if (schema == null) throw new ArgumentNullException("schema");
 
-			// Remove NewLines
-			var space = @" ";
-			var value = schema.Trim().Replace(Environment.NewLine, space);
+			var buffer = new StringBuilder(schema.Length);
 
-			// Remove brackets
-			var buffer = new StringBuilder(value.Length);
-			foreach (var symbol in value)
+			foreach (var symbol in schema)
 			{
 				if (symbol == '[' || symbol == ']')
 				{
@@ -75,8 +61,7 @@ namespace AppBuilder
 				buffer.Append(symbol);
 			}
 
-			// Unify & normalize empty symbols
-			return Regex.Replace(buffer.ToString(), @"[ \t]+", space);
+			return buffer.ToString();
 		}
 
 		public static string ExtractBetween(string input, string begin, string end)
@@ -93,21 +78,6 @@ namespace AppBuilder
 					return input.Substring(start, stop - start);
 				}
 				return input.Substring(start);
-			}
-
-			return string.Empty;
-		}
-
-		public static string ExtractBetweenGreedy(string input, string begin, string end)
-		{
-			if (input == null) throw new ArgumentNullException("input");
-
-			var index = input.IndexOf(begin, StringComparison.OrdinalIgnoreCase);
-			if (index >= 0)
-			{
-				var start = index + begin.Length;
-				var stop = input.LastIndexOf(end, StringComparison.OrdinalIgnoreCase);
-				return input.Substring(start, stop - start);
 			}
 
 			return string.Empty;

@@ -10,20 +10,37 @@ namespace AppBuilder.Db.DDL
 		public readonly static DbColumnType DateTime = new DbColumnType(@"DATETIME");
 		public readonly static DbColumnType Bytes = new DbColumnType(@"BLOB");
 
-		public string Name { get; private set; }
-		public int? Length { get; private set; }
+		private static readonly DbColumnType[] Types =
+		{
+			Integer,
+			String,
+			Decimal,
+			DateTime,
+			Bytes
+		};
 
-		public DbColumnType(string name, int? length = null)
+		public string Name { get; private set; }
+
+		private DbColumnType(string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
 			this.Name = name;
-			this.Length = length;
 		}
 
-		public static DbColumnType GetString(int? length)
+		public static DbColumnType Parse(string input)
 		{
-			return new DbColumnType(String.Name, length);
+			if (input == null) throw new ArgumentNullException("input");
+
+			foreach (var type in Types)
+			{
+				if (input.Equals(type.Name, StringComparison.OrdinalIgnoreCase))
+				{
+					return type;
+				}
+			}
+
+			throw new ArgumentOutOfRangeException(@"input");
 		}
 	}
 }

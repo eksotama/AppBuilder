@@ -64,7 +64,6 @@
     <Compile Include="Clr\ClrParameter.cs" />
     <Compile Include="Clr\ClrProperty.cs" />
     <Compile Include="Clr\ClrType.cs" />
-    <Compile Include="DbSchemaGenerator.cs" />
     <Compile Include="DbTableConverter.cs" />
     <Compile Include="Db\DDL\DbColumn.cs" />
     <Compile Include="Db\DDL\DbColumnType.cs" />

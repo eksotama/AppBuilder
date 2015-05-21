@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using AppBuilder;
 using AppBuilder.Db;
 using AppBuilder.Db.DDL;
 using AppBuilder.Db.DML;
@@ -10,10 +12,22 @@ namespace Demo
 	{
 		static void Main(string[] args)
 		{
-			var dbProducts = new DbTable(@"Products", new[]
+			var brands = new DbTable(@"Brands", new[]
+			                                    {
+				                                    DbColumn.PrimaryKey(@"Id"),
+				                                    DbColumn.String(@"Name"),
+			                                    });
+			var flavours = new DbTable(@"Flavours", new[]
+			                                    {
+				                                    DbColumn.PrimaryKey(@"Id"),
+				                                    DbColumn.String(@"Name"),
+			                                    });
+			var dbArticles = new DbTable(@"Articles", new[]
 														  {
 															  DbColumn.PrimaryKey(@"Id"),
 															  DbColumn.String(@"Name"),
+															  DbColumn.ForeignKey(@"BrandId", brands),
+															  DbColumn.ForeignKey(@"FlavourId", flavours),
 														  });
 			var dbOrderHeader = new DbTable(@"Headers", new[]
 														  {
@@ -23,13 +37,24 @@ namespace Demo
 			var dbOrderDetails = new DbTable(@"Details", new[]
 														  {
 															  DbColumn.PrimaryKey(@"Id"),
-															  DbColumn.ForeignKey(@"Product", dbProducts),
+															  DbColumn.ForeignKey(@"HeaderId", dbOrderHeader),
+															  DbColumn.ForeignKey(@"ArticleId", dbArticles),
 															  DbColumn.Integer(@"Quantity"),
-															  DbColumn.ForeignKey(@"HeaderId", dbOrderHeader)
 														  });
 
-			var query = QueryCreator.GetSelect(dbOrderHeader, dbOrderDetails);
-			Display(query);
+			var script = DbSchemaParser.GenerateScript(new DbSchema(@"iFSA", new[]
+			                                                            {
+				                                                            dbArticles,
+				                                                            dbOrderHeader,
+				                                                            dbOrderDetails,
+																			brands,
+																			flavours,
+			                                                            }));
+			File.WriteAllText(@"C:\temp\schema.sql", script);
+
+			var schema = DbSchemaParser.Parse(script);
+			Console.WriteLine(schema.Name);
+
 
 			//var query = QueryCreator.GetSelect(dbOrderTypes, dbOrderTypes.Columns.Take(1).ToArray());
 			//Display(query);
