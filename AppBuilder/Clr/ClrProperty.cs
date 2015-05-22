@@ -6,7 +6,6 @@ namespace AppBuilder.Clr
 	{
 		public ClrType Type { get; private set; }
 		public string Name { get; private set; }
-		//public string InitialValue { get; private set; }
 
 		public ClrProperty(ClrType type, string name)
 		{
