@@ -22,12 +22,8 @@ namespace AppBuilder
 
 			buffer.Append(@"public");
 			buffer.Append(Space);
-			var @sealed = GetIsSealed(@class.Sealed);
-			if (@sealed != string.Empty)
-			{
-				buffer.Append(@sealed);
-				buffer.Append(Space);
-			}
+			buffer.Append(@"sealed");
+			buffer.Append(Space);
 			buffer.Append(@"class");
 			buffer.Append(Space);
 			buffer.Append(@class.Name);
@@ -429,11 +425,6 @@ namespace AppBuilder
 			buffer.Append(primaryKeyProperty.Name);
 			buffer.Append(@";}");
 			buffer.AppendLine();
-		}
-
-		private static string GetIsSealed(bool isSealed)
-		{
-			return isSealed ? @"sealed" : string.Empty;
 		}
 
 		private static string GetProperty(ClrProperty property)

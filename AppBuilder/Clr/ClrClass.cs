@@ -5,7 +5,6 @@ namespace AppBuilder.Clr
 {
 	public sealed class ClrClass
 	{
-		public bool Sealed { get; private set; }
 		public string Name { get; private set; }
 		public List<string> Interfaces { get; private set; }
 		public ClrProperty[] Properties { get; private set; }
@@ -16,7 +15,6 @@ namespace AppBuilder.Clr
 			if (properties == null) throw new ArgumentNullException("properties");
 			if (properties.Length == 0) throw new ArgumentOutOfRangeException("properties");
 
-			this.Sealed = true;
 			this.Name = NameProvider.ToClassName(name);
 			this.Interfaces = new List<string>();
 			this.Properties = properties;
