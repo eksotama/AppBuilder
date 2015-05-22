@@ -42,17 +42,25 @@ namespace Demo
 															  DbColumn.Integer(@"Quantity"),
 														  });
 
-			var script = DbSchemaParser.GenerateScript(new DbSchema(@"iFSA", new[]
-			                                                            {
-				                                                            dbArticles,
-				                                                            dbOrderHeader,
-				                                                            dbOrderDetails,
-																			brands,
-																			flavours,
-			                                                            }));
+			var dbTables = new[]
+			               {
+				               dbArticles,
+				               dbOrderHeader,
+				               dbOrderDetails,
+				               brands,
+				               flavours,
+			               };
+			var script = DbSchemaParser.GenerateScript(new DbSchema(@"iFSA", dbTables));
 			File.WriteAllText(@"C:\temp\schema.sql", script);
 
 			var schema = DbSchemaParser.Parse(script);
+
+			for (int i = 0; i < schema.Tables.Length; i++)
+			{
+				var t1 = dbTables[i];
+				var t2 = schema.Tables[i];
+				Console.WriteLine(IsEqual(t1, t2));
+			}
 			Console.WriteLine(schema.Name);
 
 
@@ -133,6 +141,67 @@ namespace Demo
 			}
 			Console.WriteLine();
 			Console.WriteLine();
+		}
+
+		public static bool IsEqual(DbTable a, DbTable b)
+		{
+			if (a == null) throw new ArgumentNullException("a");
+			if (b == null) throw new ArgumentNullException("b");
+
+			if (a.Name.Equals(b.Name))
+			{
+				var colsA = a.Columns;
+				var colsB = b.Columns;
+				if (colsA.Length == colsB.Length)
+				{
+					for (var i = 0; i < colsA.Length; i++)
+					{
+						var ca = colsA[i];
+						var cb = colsB[i];
+						if (!IsEqual(ca, cb))
+						{
+							return false;
+						}
+					}
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private static bool IsEqual(DbColumn a, DbColumn b)
+		{
+			var x = GetColumnKey(a);
+			var y = GetColumnKey(b);
+			return x.Equals(y);
+		}
+
+		private static string GetColumnKey(DbColumn a)
+		{
+			return string.Join(@"|", new[]
+			                         {
+				                         a.AllowNull.ToString(),
+				                         a.Name,
+				                         GetForeignKeyKey(a),
+				                         a.IsPrimaryKey.ToString(),
+				                         GetTypeKey(a)
+			                         });
+		}
+
+		private static string GetForeignKeyKey(DbColumn a)
+		{
+			var fk = a.DbForeignKey;
+			if (fk != null)
+			{
+				return fk.Table + @"|" + fk.Column;
+			}
+			return string.Empty;
+		}
+
+		private static string GetTypeKey(DbColumn a)
+		{
+			return a.Type.Name;
 		}
 	}
 }
