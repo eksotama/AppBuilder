@@ -27,22 +27,6 @@ namespace AppBuilder
 			buffer.Append(@"class");
 			buffer.Append(Space);
 			buffer.Append(@class.Name);
-			var interfaces = @class.Interfaces;
-			if (interfaces.Count > 0)
-			{
-				buffer.Append(@" : ");
-
-				var addSeparator = false;
-				foreach (var @interface in interfaces)
-				{
-					if (addSeparator)
-					{
-						buffer.Append(Comma);
-					}
-					buffer.Append(@interface);
-					addSeparator = true;
-				}
-			}
 			buffer.AppendLine();
 
 			buffer.AppendLine(@"{");
