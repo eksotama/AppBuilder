@@ -38,10 +38,10 @@ namespace AppBuilder
 					{
 						var t = referencedTables[0];
 						var navigationType = nameProvider.GetClassName(t.Name);
-						navigationProperties.Add(new ClrProperty(new ClrType(string.Format(@"List<{0}>", navigationType), true, true), t.Name, ClrField.AutoProperty));
+						navigationProperties.Add(new ClrProperty(new ClrType(string.Format(@"List<{0}>", navigationType), true, true), t.Name));
 					}
 				}
-				properties.Add(new ClrProperty(type, name, ClrField.AutoProperty));
+				properties.Add(new ClrProperty(type, name));
 			}
 
 			properties.AddRange(navigationProperties);

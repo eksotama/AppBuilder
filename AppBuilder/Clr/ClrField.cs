@@ -8,8 +8,7 @@ namespace AppBuilder.Clr
 		public static readonly ClrField ImmutableAutoProperty = new ClrField(ClrType.String, @"N/A");
 
 		public ClrType Type { get; private set; }
-		public string Name { get; private set; }
-		public string InitialValue { get; private set; }
+		public string Name { get; private set; }		
 		public bool IsReadOnly { get; private set; }
 		public ClrProperty Property { get; private set; }
 
@@ -21,7 +20,7 @@ namespace AppBuilder.Clr
 
 			this.Type = type;
 			this.Name = NameProvider.ToFieldName(name);
-			this.InitialValue = initialValue;
+			
 			this.IsReadOnly = isReadOnly;
 			this.Property = property;
 		}
