@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using AppBuilder;
+using AppBuilder.Clr;
 using AppBuilder.Db;
 using AppBuilder.Db.DDL;
 using AppBuilder.Db.DML;
@@ -10,58 +11,102 @@ namespace Demo
 {
 	class Program
 	{
+		public sealed class Person
+		{
+			public long Id { get; private set; }
+			public string FirstName { get; private set; }
+			public string LastName { get; private set; }
+			public long Age { get; private set; }
+			public DateTime BirthDate { get; private set; }
+
+			public Person(long id, string firstName, string lastName, long age, DateTime birthDate)
+			{
+				if (firstName == null) throw new ArgumentNullException("firstName");
+				if (lastName == null) throw new ArgumentNullException("lastName");
+
+				this.Id = id;
+				this.FirstName = firstName;
+				this.LastName = lastName;
+				this.Age = age;
+				this.BirthDate = birthDate;
+			}
+		}
+
+
+
+
+
+
+
 		static void Main(string[] args)
 		{
-			var brands = new DbTable(@"Brands", new[]
-			                                    {
-				                                    DbColumn.PrimaryKey(@"Id"),
-				                                    DbColumn.String(@"Name"),
-			                                    });
-			var flavours = new DbTable(@"Flavours", new[]
-			                                    {
-				                                    DbColumn.PrimaryKey(@"Id"),
-				                                    DbColumn.String(@"Name"),
-			                                    });
-			var dbArticles = new DbTable(@"Articles", new[]
-														  {
-															  DbColumn.PrimaryKey(@"Id"),
-															  DbColumn.String(@"Name"),
-															  DbColumn.ForeignKey(@"BrandId", brands),
-															  DbColumn.ForeignKey(@"FlavourId", flavours),
-														  });
-			var dbOrderHeader = new DbTable(@"Headers", new[]
-														  {
-															  DbColumn.PrimaryKey(@"Id"),
-															  DbColumn.String(@"Name")
-														  });
-			var dbOrderDetails = new DbTable(@"Details", new[]
-														  {
-															  DbColumn.PrimaryKey(@"Id"),
-															  DbColumn.ForeignKey(@"HeaderId", dbOrderHeader),
-															  DbColumn.ForeignKey(@"ArticleId", dbArticles),
-															  DbColumn.Integer(@"Quantity"),
-														  });
+			var person = new ClrClass(@"Person", new[]
+			                                     {
+				                                     ClrProperty.Long(@"Id"),
+													 ClrProperty.String(@"FirstName"),
+													 ClrProperty.String(@"LastName"),
+													 ClrProperty.Long(@"Age"),
+													 ClrProperty.DateTime(@"BirthDate"),
+			                                     });
+			var code = ClrClassGenerator.GetCode(person);
+			Console.WriteLine(code);
 
-			var dbTables = new[]
-			               {
-				               dbArticles,
-				               dbOrderHeader,
-				               dbOrderDetails,
-				               brands,
-				               flavours,
-			               };
-			var script = DbSchemaParser.GenerateScript(new DbSchema(@"iFSA", dbTables));
-			File.WriteAllText(@"C:\temp\schema.sql", script);
+			File.WriteAllText(@"C:\temp\obj.cs", code);
 
-			var schema = DbSchemaParser.Parse(script);
 
-			for (int i = 0; i < schema.Tables.Length; i++)
-			{
-				var t1 = dbTables[i];
-				var t2 = schema.Tables[i];
-				Console.WriteLine(IsEqual(t1, t2));
-			}
-			Console.WriteLine(schema.Name);
+			//var brands = new DbTable(@"Brands", new[]
+			//									{
+			//										DbColumn.PrimaryKey(@"Id"),
+			//										DbColumn.String(@"Name"),
+			//									});
+			//var flavours = new DbTable(@"Flavours", new[]
+			//									{
+			//										DbColumn.PrimaryKey(@"Id"),
+			//										DbColumn.String(@"Name"),
+			//									});
+			//var dbArticles = new DbTable(@"Articles", new[]
+			//											  {
+			//												  DbColumn.PrimaryKey(@"Id"),
+			//												  DbColumn.String(@"Name"),
+			//												  DbColumn.ForeignKey(@"BrandId", brands),
+			//												  DbColumn.ForeignKey(@"FlavourId", flavours),
+			//											  });
+			//var dbOrderHeader = new DbTable(@"Headers", new[]
+			//											  {
+			//												  DbColumn.PrimaryKey(@"Id"),
+			//												  DbColumn.String(@"Name")
+			//											  });
+			//var dbOrderDetails = new DbTable(@"Details", new[]
+			//											  {
+			//												  DbColumn.PrimaryKey(@"Id"),
+			//												  DbColumn.ForeignKey(@"HeaderId", dbOrderHeader),
+			//												  DbColumn.ForeignKey(@"ArticleId", dbArticles),
+			//												  DbColumn.Integer(@"Quantity"),
+			//											  });
+
+
+
+			//var dbTables = new[]
+			//			   {
+			//				   dbArticles,
+			//				   dbOrderHeader,
+			//				   dbOrderDetails,
+			//				   brands,
+			//				   flavours,
+			//			   };
+
+			//var script = DbSchemaParser.GenerateScript(new DbSchema(@"iFSA", dbTables));
+			//File.WriteAllText(@"C:\temp\schema.sql", script);
+
+			//var schema = DbSchemaParser.Parse(script);
+
+			//for (int i = 0; i < schema.Tables.Length; i++)
+			//{
+			//	var t1 = dbTables[i];
+			//	var t2 = schema.Tables[i];
+			//	Console.WriteLine(IsEqual(t1, t2));
+			//}
+			//Console.WriteLine(schema.Name);
 
 
 			//var query = QueryCreator.GetSelect(dbOrderTypes, dbOrderTypes.Columns.Take(1).ToArray());

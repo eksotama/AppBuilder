@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using AppBuilder.Clr;
 using AppBuilder.Db;
@@ -12,7 +10,7 @@ namespace AppBuilder
 	{
 		private static readonly char Space = ' ';
 		private static readonly char Comma = ',';
-		private static readonly char Semicolumn = ';';
+		private static readonly char Semicolon = ';';
 
 		public static string GetClassCode(ClrClass @class)
 		{
@@ -31,6 +29,19 @@ namespace AppBuilder
 
 			buffer.AppendLine(@"{");
 
+			foreach (var property in @class.Properties)
+			{
+				buffer.Append(@"public");
+				buffer.Append(Space);
+				buffer.Append(property.Type.Name);
+				buffer.Append(Space);
+				buffer.Append(property.Name);
+				buffer.Append(Space);
+				buffer.Append(@"{ get; private set; }");
+			}
+
+			buffer.AppendLine();
+
 			//var properties = @class.Properties;
 			//if (properties.Length > 0)
 			//{
@@ -42,7 +53,8 @@ namespace AppBuilder
 			//}
 
 			//buffer.Append(GetContructor(new ClrContructor(@class.Name, GetParameters(properties))));
-			//buffer.AppendLine(@"}");
+
+			buffer.AppendLine(@"}");
 
 			return buffer.ToString();
 		}

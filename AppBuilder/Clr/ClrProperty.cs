@@ -15,5 +15,40 @@ namespace AppBuilder.Clr
 			this.Type = type;
 			this.Name = NameProvider.ToPropertyName(name);
 		}
+
+		public static ClrProperty Long(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrProperty(ClrType.Long, name);
+		}
+
+		public static ClrProperty Decimal(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrProperty(ClrType.Decimal, name);
+		}
+
+		public static ClrProperty DateTime(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrProperty(ClrType.DateTime, name);
+		}
+
+		public static ClrProperty String(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrProperty(ClrType.String, name);
+		}
+
+		public static ClrProperty Bytes(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrProperty(ClrType.Bytes, name);
+		}
 	}
 }
