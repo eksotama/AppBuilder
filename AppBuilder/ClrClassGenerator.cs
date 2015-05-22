@@ -9,6 +9,7 @@ namespace AppBuilder
 		private static readonly char Space = ' ';
 		private static readonly char Semicolon = ';';
 		private static readonly char Comma = ',';
+		private static readonly char Tab = '\t';
 
 		public static string GetCode(ClrClass @class)
 		{
@@ -42,6 +43,7 @@ namespace AppBuilder
 		{
 			foreach (var property in properties)
 			{
+				buffer.Append(Tab);
 				buffer.Append(@"public");
 				buffer.Append(Space);
 				buffer.Append(property.Type.Name);
@@ -57,6 +59,7 @@ namespace AppBuilder
 
 		private static void AppendContructor(string name, ClrProperty[] properties, StringBuilder buffer)
 		{
+			buffer.Append(Tab);
 			buffer.Append(@"public");
 			buffer.Append(Space);
 			buffer.Append(name);
@@ -66,7 +69,7 @@ namespace AppBuilder
 			var parameterNames = new string[properties.Length];
 			for (var i = 0; i < parameterNames.Length; i++)
 			{
-				parameterNames[i] = StringUtils.LowerFirst(properties[i].Name);
+				parameterNames[i] = NameProvider.ToParamterName(properties[i].Name);
 			}
 			for (var i = 0; i < parameterNames.Length; i++)
 			{
@@ -81,9 +84,9 @@ namespace AppBuilder
 				buffer.Append(parameterName);
 			}
 
-			buffer.Append(@")");
-			buffer.AppendLine();
+			buffer.AppendLine(@")");
 
+			buffer.Append(Tab);
 			buffer.AppendLine(@"{");
 
 			// Add parameter checks
@@ -94,6 +97,8 @@ namespace AppBuilder
 				if (property.Type.CheckValue)
 				{
 					hasChecks = true;
+					buffer.Append(Tab);
+					buffer.Append(Tab);
 					buffer.AppendFormat(@"if ({0} == null) throw new ArgumentNullException(""{0}"");", parameterNames[i]);
 					buffer.AppendLine();
 				}
@@ -106,6 +111,8 @@ namespace AppBuilder
 
 			for (var i = 0; i < properties.Length; i++)
 			{
+				buffer.Append(Tab);
+				buffer.Append(Tab);
 				buffer.Append(@"this.");
 				buffer.Append(properties[i].Name);
 				buffer.Append(@" = ");
@@ -114,6 +121,7 @@ namespace AppBuilder
 				buffer.AppendLine();
 			}
 
+			buffer.Append(Tab);
 			buffer.AppendLine(@"}");
 		}
 	}

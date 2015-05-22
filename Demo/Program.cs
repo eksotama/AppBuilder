@@ -1,52 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Text;
 using AppBuilder;
-using AppBuilder.Clr;
-using AppBuilder.Db;
 using AppBuilder.Db.DDL;
-using AppBuilder.Db.DML;
 
 namespace Demo
 {
 	class Program
 	{
-		
-
-		public sealed class Car
-		{
-			public long Id { get; private set; }
-			public string Name { get; private set; }
-
-			public Car(long id, string name)
-			{
-				if (name == null) throw new ArgumentNullException("name");
-
-				this.Id = id;
-				this.Name = name;
-			}
-		}
-
-		public sealed class Address
-		{
-			public long Id { get; private set; }
-			public string Name { get; private set; }
-
-			public Address(long id, string name)
-			{
-				if (name == null) throw new ArgumentNullException("name");
-
-				this.Id = id;
-				this.Name = name;
-			}
-		}
-
-
-
-
-
-		
 
 
 
@@ -54,153 +16,176 @@ namespace Demo
 
 		static void Main(string[] args)
 		{
-			var person = new ClrClass(@"Person", new[]
-			                                     {
-				                                     ClrProperty.Long(@"Id"),
-													 ClrProperty.String(@"Name"),
-													 ClrProperty.UserType(@"Address"),
-													 ClrProperty.UserCollection(@"Cars"),
-			                                     });
+			var articleTypes = DbTable.ReadOnly(@"ArticleTypes", new[]
+			                                                     {
+				                                                     DbColumn.PrimaryKey(),
+				                                                     DbColumn.String(@"Name"),
+			                                                     });
+			var brands = DbTable.ReadOnly(@"Brands", new[]
+			                                         {
+				                                         DbColumn.PrimaryKey(),
+				                                         DbColumn.String(@"Name"),
+			                                         });
 
-			var code = ClrClassGenerator.GetCode(person);
-			Console.WriteLine(code);
+			var flavours = DbTable.ReadOnly(@"Flavours", new[]
+			                                             {
+				                                             DbColumn.PrimaryKey(),
+				                                             DbColumn.String(@"Name"),
+			                                             });
 
-			File.WriteAllText(@"C:\temp\obj.cs", code);
+			var articles = DbTable.ReadOnly(@"Articles", new[]
+			                                             {
+				                                             DbColumn.PrimaryKey(),
+				                                             DbColumn.String(@"Name"),
+				                                             DbColumn.ForeignKey(articleTypes),
+				                                             DbColumn.ForeignKey(brands),
+				                                             DbColumn.ForeignKey(flavours),
+				                                             DbColumn.Decimal(@"Price"),
+			                                             });
+
+			var deliveryLocation = DbTable.ReadOnly(@"DeliveryLocations", new[]
+			                                                              {
+				                                                              DbColumn.PrimaryKey(),
+				                                                              DbColumn.String(@"Name"),
+			                                                              });
+			var outlets = DbTable.ReadOnly(@"Outlets", new[]
+			                                           {
+				                                           DbColumn.PrimaryKey(),
+				                                           DbColumn.String(@"Name"),
+				                                           DbColumn.String(@"Address"),
+				                                           DbColumn.String(@"City"),
+				                                           DbColumn.String(@"Street"),
+				                                           DbColumn.ForeignKey(deliveryLocation),
+			                                           });
+
+			var users = DbTable.ReadOnly(@"Users", new[]
+			                                       {
+				                                       DbColumn.PrimaryKey(),
+				                                       DbColumn.String(@"LoginName"),
+				                                       DbColumn.String(@"FullName"),
+			                                       });
+
+			var visits = DbTable.Normal(@"Visits", new[]
+			                                       {
+													   DbColumn.PrimaryKey(),
+													   DbColumn.DateTime(@"Date"),
+													   DbColumn.ForeignKey(outlets),
+													   DbColumn.ForeignKey(users),
+			                                       });
+
+			var activityTypes = DbTable.ReadOnly(@"ActivityTypes", new[]
+			                                                        {
+				                                                        DbColumn.PrimaryKey(),
+				                                                        DbColumn.String(@"Name"),
+				                                                        DbColumn.String(@"Code"),
+			                                                        });
+
+			var activities = DbTable.Normal(@"Activities", new[]
+			                                               {
+															   DbColumn.PrimaryKey(),
+															   DbColumn.ForeignKey(activityTypes),
+															   DbColumn.ForeignKey(visits),
+															   DbColumn.DateTime(@"ValidFrom"),
+															   DbColumn.DateTime(@"ValidTo"),
+			                                               }, @"Activity");
+
+			var ifsa = new[]
+			           {
+						   articleTypes,
+						   brands,
+						   flavours,
+						   articles,
+						   deliveryLocation,
+						   outlets,
+						   users,
+						   visits,
+						   activityTypes,
+						   activities
+			           };
+
+			DumpDDL(ifsa);
+			DumpClasses(ifsa);
 
 
-			//var brands = new DbTable(@"Brands", new[]
+
+			//var brands = DbTable.ReadOnly(@"Brands", new[]
+			//										  {
+			//											  DbColumn.PrimaryKey(),
+			//											  DbColumn.String(@"Name"),
+			//										  });
+			//var flavours = DbTable.ReadOnly(@"Flavours", new[]
 			//									{
-			//										DbColumn.PrimaryKey(@"Id"),
+			//										DbColumn.PrimaryKey(),
 			//										DbColumn.String(@"Name"),
 			//									});
-			//var flavours = new DbTable(@"Flavours", new[]
-			//									{
-			//										DbColumn.PrimaryKey(@"Id"),
-			//										DbColumn.String(@"Name"),
-			//									});
-			//var dbArticles = new DbTable(@"Articles", new[]
+			//var dbArticles = DbTable.ReadOnly(@"Articles", new[]
+			//											   {
+			//												   DbColumn.PrimaryKey(),
+			//												   DbColumn.String(@"Name"),
+			//												   DbColumn.ForeignKey(brands),
+			//												   DbColumn.ForeignKey(flavours),
+			//											   });
+			//var dbOrderHeader = DbTable.Normal(@"OrderHeaders", new[]
 			//											  {
-			//												  DbColumn.PrimaryKey(@"Id"),
-			//												  DbColumn.String(@"Name"),
-			//												  DbColumn.ForeignKey(@"BrandId", brands),
-			//												  DbColumn.ForeignKey(@"FlavourId", flavours),
-			//											  });
-			//var dbOrderHeader = new DbTable(@"Headers", new[]
-			//											  {
-			//												  DbColumn.PrimaryKey(@"Id"),
+			//												  DbColumn.PrimaryKey(),
 			//												  DbColumn.String(@"Name")
 			//											  });
-			//var dbOrderDetails = new DbTable(@"Details", new[]
+			//var dbOrderDetails = DbTable.Normal(@"OrderDetails", new[]
 			//											  {
-			//												  DbColumn.PrimaryKey(@"Id"),
-			//												  DbColumn.ForeignKey(@"HeaderId", dbOrderHeader),
-			//												  DbColumn.ForeignKey(@"ArticleId", dbArticles),
+			//												  DbColumn.PrimaryKey(),
+			//												  DbColumn.ForeignKey(dbOrderHeader),
+			//												  DbColumn.ForeignKey(dbArticles),
 			//												  DbColumn.Integer(@"Quantity"),
 			//											  });
 
-
-
 			//var dbTables = new[]
 			//			   {
-			//				   dbArticles,
-			//				   dbOrderHeader,
+			//				   dbArticles,							   
 			//				   dbOrderDetails,
+			//				   dbOrderHeader,
 			//				   brands,
 			//				   flavours,
 			//			   };
 
-			//var script = DbSchemaParser.GenerateScript(new DbSchema(@"iFSA", dbTables));
-			//File.WriteAllText(@"C:\temp\schema.sql", script);
-
-			//var schema = DbSchemaParser.Parse(script);
-
-			//for (int i = 0; i < schema.Tables.Length; i++)
-			//{
-			//	var t1 = dbTables[i];
-			//	var t2 = schema.Tables[i];
-			//	Console.WriteLine(IsEqual(t1, t2));
-			//}
-			//Console.WriteLine(schema.Name);
-
-
-			//var query = QueryCreator.GetSelect(dbOrderTypes, dbOrderTypes.Columns.Take(1).ToArray());
-			//Display(query);
-			//query = QueryCreator.GetInsert(dbOrderTypes);
-			//Display(query);
-			//query = QueryCreator.GetUpdate(dbOrderTypes);
-			//Display(query);
-			//query = QueryCreator.GetDelete(dbOrderTypes);
-			//Display(query);
-
-
-			//var dbOrderTypes = new DbTable(@"OrderTypes", new[]
-			//											  {
-			//												  DbColumn.PrimaryKey(@"Id"),
-			//												  DbColumn.String(@"Name")
-			//											  });
-			//var dbOrders = new DbTable(@"Orders", new[]
-			//									  {
-			//										  DbColumn.PrimaryKey(@"Id"),
-			//										  DbColumn.DateTime(@"OrderDate"),
-			//										  DbColumn.ForeignKey(@"OrderTypeId", dbOrderTypes)
-			//									  });
-			//var dbProducts = new DbTable(@"Products", new[]
-			//										  {
-			//											  DbColumn.PrimaryKey(@"Id"),
-			//											  DbColumn.String(@"Name"),
-			//											  DbColumn.Decimal(@"Price"),
-			//										  });
-			//var dbOrderDetails = new DbTable(@"OrderDetails", new[]
-			//												  {
-			//													  DbColumn.PrimaryKey(@"Id"),
-			//													  DbColumn.Integer(@"Quantity"),
-			//													  DbColumn.ForeignKey(@"ProductId", dbProducts),																  
-			//													  DbColumn.ForeignKey(@"OrderId", dbOrders),
-			//												  });
-
-			//var schema = new DbSchema(@"iFSA", new[]
-			//								   {
-			//									   dbOrderTypes,
-			//									   dbOrders,
-			//									   dbProducts,
-			//									   dbOrderDetails
-			//								   });
-			//var nameProvider = new NameProvider();
-
-			//var code = new StringBuilder(2048);
-			//foreach (var table in schema.Tables)
-			//{
-			//	if (table.Name == dbOrders.Name)
-			//	{
-			//		var @class = DbTableConverter.ToClrClass(table, nameProvider, schema.Tables);
-			//		var adapter = ClrCodeGenerator.GetAdapter(@class, nameProvider, table);
-			//		Console.WriteLine(adapter);
-
-			//		code.AppendLine(adapter);
-			//		code.AppendLine();
-			//		code.AppendLine();
-			//		break;
-			//	}
-			//}
-
-			//File.WriteAllText(@"C:\temp\obj.cs", code.ToString());
-
-
-			//Builder.Generate(schema, nameProvider, new DirectoryInfo(@"C:\temp\app\"));
-			////File.WriteAllText(@"C:\temp\schema.sql", DbSchemaGenerator.Generate(schema));
+			//DumpTables(dbTables);
 		}
 
-		private static void Display(DbQuery query)
+		private static void DumpDDL(DbTable[] tables)
 		{
-			Console.WriteLine(query.Statement);
-			Console.WriteLine(query.Parameters.Length);
-			foreach (var p in query.Parameters)
+			var script = DbSchemaParser.GenerateScript(new DbSchema(@"iFSA", tables));
+			File.WriteAllText(@"C:\temp\schema.sql", script);
+
+			var schema = DbSchemaParser.Parse(script);
+			for (int index = 0; index < schema.Tables.Length; index++)
 			{
-				Console.WriteLine(p.Name);
+				var a = schema.Tables[index];
+				var b = tables[index];
+				Console.WriteLine(IsEqual(a, b));
 			}
-			Console.WriteLine();
-			Console.WriteLine();
 		}
+
+		private static void DumpClasses(DbTable[] tables)
+		{
+			var buffer = new StringBuilder();
+			foreach (var table in tables)
+			{
+				var code = ClrClassGenerator.GetCode(DbTableConverter.ToClrClass(table, tables));
+				buffer.AppendLine(code);
+			}
+			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());
+		}
+
+		//private static void Display(DbQuery query)
+		//{
+		//	Console.WriteLine(query.Statement);
+		//	Console.WriteLine(query.Parameters.Length);
+		//	foreach (var p in query.Parameters)
+		//	{
+		//		Console.WriteLine(p.Name);
+		//	}
+		//	Console.WriteLine();
+		//	Console.WriteLine();
+		//}
 
 		public static bool IsEqual(DbTable a, DbTable b)
 		{

@@ -4,11 +4,11 @@ namespace AppBuilder.Db.DDL
 {
 	public sealed class DbColumnType
 	{
-		public readonly static DbColumnType Integer = new DbColumnType(@"INTEGER");
-		public readonly static DbColumnType String = new DbColumnType(@"TEXT");
-		public readonly static DbColumnType Decimal = new DbColumnType(@"DECIMAL");
-		public readonly static DbColumnType DateTime = new DbColumnType(@"DATETIME");
-		public readonly static DbColumnType Bytes = new DbColumnType(@"BLOB");
+		public readonly static DbColumnType Integer = new DbColumnType(0, @"INTEGER");
+		public readonly static DbColumnType String = new DbColumnType(1, @"TEXT");
+		public readonly static DbColumnType Decimal = new DbColumnType(2, @"DECIMAL");
+		public readonly static DbColumnType DateTime = new DbColumnType(3, @"DATETIME");
+		public readonly static DbColumnType Bytes = new DbColumnType(4, @"BLOB");
 
 		private static readonly DbColumnType[] Types =
 		{
@@ -19,12 +19,14 @@ namespace AppBuilder.Db.DDL
 			Bytes
 		};
 
+		public long Sequence { get; private set; }
 		public string Name { get; private set; }
 
-		private DbColumnType(string name)
+		private DbColumnType(long sequence, string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
+			this.Sequence = sequence;
 			this.Name = name;
 		}
 

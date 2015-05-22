@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using AppBuilder.Db.DDL;
 using AppBuilder.Db.DML;
@@ -42,14 +40,14 @@ namespace AppBuilder.Db
 			{
 				detailsAlias += @"1";
 			}
-			var primaryKey = headerTable.Columns.Single(c => c.IsPrimaryKey);
-			var foreignKey = detailsTable.Columns.Single(c => c.DbForeignKey != null && c.DbForeignKey.Table == headerTable.Name);
+			var primaryKeyColumn = GetPrimaryKey(headerTable.Columns);
+			var foreignKeyColumn = GetForeignKey(detailsTable.Columns, headerTable);
 
 			var buffer = new StringBuilder();
 			buffer.Append(@"SELECT ");
-			AppendNames(buffer, headerTable.Columns.Select(c => headerAlias + @"." + c.Name).ToArray());
+			AppendNames(buffer, GetColumnNames(headerTable.Columns, headerAlias));
 			AppendSeparator(buffer);
-			AppendNames(buffer, detailsTable.Columns.Where(c => c.DbForeignKey == null || c.DbForeignKey.Table != headerTable.Name).Select(c => detailsAlias + @"." + c.Name).ToArray());
+			AppendNames(buffer, GetColumnNames(ExcludeColumn(detailsTable.Columns, foreignKeyColumn), detailsAlias));
 			buffer.Append(@" FROM ");
 			buffer.Append(headerTable.Name);
 			buffer.Append(@" ");
@@ -64,11 +62,11 @@ namespace AppBuilder.Db
 			buffer.Append(@" ");
 			buffer.Append(headerAlias);
 			buffer.Append(@".");
-			buffer.Append(primaryKey.Name);
+			buffer.Append(primaryKeyColumn.Name);
 			buffer.Append(@" = ");
 			buffer.Append(detailsAlias);
 			buffer.Append(@".");
-			buffer.Append(foreignKey.Name);
+			buffer.Append(foreignKeyColumn.Name);
 
 			return new DbQuery(buffer.ToString());
 		}
@@ -128,10 +126,10 @@ namespace AppBuilder.Db
 		{
 			var buffer = new StringBuilder(256);
 
-			var updateColumns = table.Columns.Where(c => !c.IsPrimaryKey).ToArray();
+			var updateColumns = GetUpdatableColumns(table.Columns);
 			var updateParameters = GetParameters(updateColumns);
 
-			var primaryKeyColumns = table.Columns.Where(c => c.IsPrimaryKey).ToArray();
+			var primaryKeyColumns = new[] { GetPrimaryKey(table.Columns) };
 			var primaryKeyParameters = GetParameters(primaryKeyColumns);
 
 			buffer.Append(@"UPDATE ");
@@ -148,7 +146,7 @@ namespace AppBuilder.Db
 		{
 			var buffer = new StringBuilder(256);
 
-			var primaryKeyColumns = table.Columns.Where(c => c.IsPrimaryKey).ToArray();
+			var primaryKeyColumns = new[] { GetPrimaryKey(table.Columns) };
 			var primaryKeyParameters = GetParameters(primaryKeyColumns);
 
 			buffer.Append(@"DELETE");
@@ -160,19 +158,35 @@ namespace AppBuilder.Db
 			return buffer;
 		}
 
-		private static void AppendParameters(StringBuilder buffer, IEnumerable<DbColumn> columns, IEnumerable<DbQueryParameter> parameters)
+		private static void AppendParameters(StringBuilder buffer, DbColumn[] columns, DbQueryParameter[] parameters)
 		{
-			AppendNames(buffer, columns.Zip(parameters, (column, parameter) => column.Name + @" = " + parameter.Name).ToArray());
+			var names = new string[columns.Length];
+			for (var i = 0; i < names.Length; i++)
+			{
+				names[i] = columns[i] + @" = " + parameters[i];
+			}
+
+			AppendNames(buffer, names);
 		}
 
-		private static void AppendColumnNames(StringBuilder buffer, IEnumerable<DbColumn> columns)
+		private static void AppendColumnNames(StringBuilder buffer, DbColumn[] columns)
 		{
-			AppendNames(buffer, columns.Select(v => v.Name).ToArray());
+			var names = new string[columns.Length];
+			for (var i = 0; i < names.Length; i++)
+			{
+				names[i] = columns[i].Name;
+			}
+			AppendNames(buffer, names);
 		}
 
-		private static void AppendParameterNames(StringBuilder buffer, IEnumerable<DbQueryParameter> parameters)
+		private static void AppendParameterNames(StringBuilder buffer, DbQueryParameter[] parameters)
 		{
-			AppendNames(buffer, parameters.Select(v => v.Name).ToArray());
+			var names = new string[parameters.Length];
+			for (var i = 0; i < names.Length; i++)
+			{
+				names[i] = parameters[i].Name;
+			}
+			AppendNames(buffer, names);
 		}
 
 		private static void AppendNames(StringBuilder buffer, string[] names)
@@ -202,6 +216,73 @@ namespace AppBuilder.Db
 			}
 
 			return parameters;
+		}
+
+		private static DbColumn GetPrimaryKey(DbColumn[] columns)
+		{
+			foreach (var column in columns)
+			{
+				if (column.IsPrimaryKey)
+				{
+					return column;
+				}
+			}
+			return null;
+		}
+
+		private static DbColumn GetForeignKey(DbColumn[] columns, DbTable foreignKeyTable)
+		{
+			var name = foreignKeyTable.Name;
+
+			foreach (var column in columns)
+			{
+				var foreignKey = column.DbForeignKey;
+				if (foreignKey != null && foreignKey.Table == name)
+				{
+					return column;
+				}
+			}
+			return null;
+		}
+
+		private static DbColumn[] ExcludeColumn(DbColumn[] columns, DbColumn excludeColumn)
+		{
+			var index = 0;
+			var result = new DbColumn[columns.Length - 1];
+			foreach (var column in columns)
+			{
+				if (column != excludeColumn)
+				{
+					result[index++] = column;
+				}
+			}
+			return result;
+		}
+
+		private static DbColumn[] GetUpdatableColumns(DbColumn[] columns)
+		{
+			var index = 0;
+			var result = new DbColumn[columns.Length - 1];
+			foreach (var column in columns)
+			{
+				if (!column.IsPrimaryKey)
+				{
+					result[index++] = column;
+				}
+			}
+			return result;
+		}
+
+		private static string[] GetColumnNames(DbColumn[] columns, string alias)
+		{
+			var names = new string[columns.Length];
+
+			for (var i = 0; i < names.Length; i++)
+			{
+				names[i] = alias + @"." + columns[i].Name;
+			}
+
+			return names;
 		}
 	}
 }

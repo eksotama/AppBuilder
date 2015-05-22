@@ -7,91 +7,84 @@ namespace AppBuilder
 {
 	public static class DbTableConverter
 	{
-		public static ClrClass ToClrClass(DbTable table, NameProvider nameProvider, DbTable[] tables)
+		private static readonly ClrType[] Types =
+		{
+			ClrType.Long,
+			ClrType.String,
+			ClrType.Decimal,
+			ClrType.DateTime,
+			ClrType.Bytes,
+		};
+
+		public static ClrClass ToClrClass(DbTable table, DbTable[] tables)
 		{
 			if (table == null) throw new ArgumentNullException("table");
-			if (nameProvider == null) throw new ArgumentNullException("nameProvider");
 			if (tables == null) throw new ArgumentNullException("tables");
 
-			return new ClrClass(nameProvider.GetClassName(table.Name), GetProperties(table, nameProvider, tables));
+			return new ClrClass(table.ClassName, GetProperties(table, tables));
 		}
 
-		private static ClrProperty[] GetProperties(DbTable table, NameProvider nameProvider, IEnumerable<DbTable> tables)
+		private static ClrProperty[] GetProperties(DbTable inputTable, DbTable[] tables)
 		{
-			var referencedTables = GetReferencedTables(table.Name, tables);
+			var columns = inputTable.Columns;
+			var properties = new List<ClrProperty>(columns.Length + 1);
 
-			var columns = table.Columns;
-			var properties = new List<ClrProperty>(columns.Length);
-			var navigationProperties = new List<ClrProperty>();
-
+			// Table properties
 			foreach (var column in columns)
 			{
 				var foreignKey = column.DbForeignKey;
 
-				var name = nameProvider.GetPropertyName(column.Name, foreignKey != null);
-				var type = GetClrType(column.Type);
+				var type = Types[column.Type.Sequence];
+				var name = NameProvider.GetPropertyName(column.Name, foreignKey != null);
+
 				if (foreignKey != null)
 				{
-					type = ClrType.UserType(nameProvider.GetClassName(foreignKey.Table), !column.AllowNull);
-					if (referencedTables.Count > 0)
+					var classType = string.Empty;
+					var tableName = foreignKey.Table;
+					foreach (var table in tables)
 					{
-						var t = referencedTables[0];
-						navigationProperties.Add(ClrProperty.UserCollection(t.Name, nameProvider.GetClassName(t.Name)));
+						if (table.Name == tableName)
+						{
+							classType = table.ClassName;
+							break;
+						}
 					}
+					type = ClrType.UserType(classType, !column.AllowNull);
 				}
+
 				properties.Add(new ClrProperty(type, name));
 			}
 
-			properties.AddRange(navigationProperties);
-
-			return properties.ToArray();
-		}
-
-		private static List<DbTable> GetReferencedTables(string name, IEnumerable<DbTable> tables)
-		{
-			var referencedTables = new List<DbTable>();
-
-			foreach (var table in tables)
+			// Collection properties for Normal table
+			if (inputTable.IsReadOnly.HasValue && !inputTable.IsReadOnly.Value)
 			{
-				if (name != table.Name)
+				var inputTableName = inputTable.Name;
+
+				foreach (var table in tables)
 				{
-					foreach (var column in table.Columns)
+					var currentTableName = table.Name;
+					if (inputTableName != currentTableName)
 					{
-						var foreignKey = column.DbForeignKey;
-						if (foreignKey != null && foreignKey.Table == name)
+						var isCollectionAdded = false;
+						foreach (var column in table.Columns)
 						{
-							referencedTables.Add(table);
+							var foreignKey = column.DbForeignKey;
+							if (foreignKey != null && foreignKey.Table == inputTableName)
+							{
+								properties.Add(ClrProperty.UserCollection(currentTableName, table.ClassName));
+								isCollectionAdded = true;
+								break;
+							}
+						}
+						if (isCollectionAdded)
+						{
+							break;
 						}
 					}
 				}
 			}
 
-			return referencedTables;
-		}
-
-		private static ClrType GetClrType(DbColumnType type)
-		{
-			if (type == DbColumnType.Integer)
-			{
-				return ClrType.Long;
-			}
-			if (type == DbColumnType.String || type.Name == DbColumnType.String.Name)
-			{
-				return ClrType.String;
-			}
-			if (type == DbColumnType.Decimal)
-			{
-				return ClrType.Decimal;
-			}
-			if (type == DbColumnType.DateTime)
-			{
-				return ClrType.DateTime;
-			}
-			if (type == DbColumnType.Bytes)
-			{
-				return ClrType.Bytes;
-			}
-			throw new Exception(@"Unsupported DbColumnType:" + type);
+			return properties.ToArray();
 		}
 	}
 }

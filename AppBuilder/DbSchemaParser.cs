@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using AppBuilder.Db.DDL;
 
@@ -8,16 +7,24 @@ namespace AppBuilder
 {
 	public static class DbSchemaParser
 	{
-		private static readonly string[] SeparatorArray = { @";" + Environment.NewLine };
+		private static readonly string Space = @" ";
+		private static readonly string Semicolon = @";";
+		private static readonly string Comma = @",";
+		private static readonly string OpenBrace = @"(";
+		private static readonly string CloseBrace = @")";
+		private static readonly char Tab = '\t';
+		private static readonly string[] SeparatorArray = { Semicolon + Environment.NewLine };
 
 		public static DbSchema Parse(string script)
 		{
 			if (script == null) throw new ArgumentNullException("script");
 
-			var tables = script
-				.Split(SeparatorArray, StringSplitOptions.RemoveEmptyEntries)
-				.Select(ParseTable)
-				.ToArray();
+			var entries = script.Split(SeparatorArray, StringSplitOptions.RemoveEmptyEntries);
+			var tables = new DbTable[entries.Length];
+			for (var i = 0; i < tables.Length; i++)
+			{
+				tables[i] = ParseTable(entries[i]);
+			}
 			return new DbSchema(string.Empty, tables);
 		}
 
@@ -38,27 +45,26 @@ namespace AppBuilder
 
 		private static DbTable ParseTable(string script)
 		{
-			var lines = StringUtils.RemoveBrackets(script)
+			var lines = RemoveBrackets(script)
 				.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
 
-			var tableName = StringUtils.ExtractBetween(lines[0], @"CREATE TABLE", Environment.NewLine).Trim();
+			var tableName = ExtractBetween(lines[0], @"CREATE TABLE", Environment.NewLine).Trim();
 
 			var columns = new List<DbColumn>();
 			for (var index = 2; index < lines.Length - 1; index++)
 			{
 				var value = lines[index].Trim();
-				var columnName = StringUtils.ExtractBetween(value, @"FOREIGN KEY", @")");
+				var columnName = ExtractBetween(value, @"FOREIGN KEY", CloseBrace);
 				if (columnName != string.Empty)
 				{
 					columnName = columnName.Trim().Substring(1);
 
 					var foreignKey = ParseForeignKey(value);
-					for (var i = 0; i < columns.Count; i++)
+					foreach (var column in columns)
 					{
-						var column = columns[i];
 						if (column.Name == columnName)
 						{
-							columns[i] = new DbColumn(column.Type, column.Name, foreignKey, column.AllowNull, column.IsPrimaryKey);
+							column.DbForeignKey = foreignKey;
 							break;
 						}
 					}
@@ -69,22 +75,22 @@ namespace AppBuilder
 				}
 			}
 
-			return new DbTable(tableName, columns.ToArray());
+			return new DbTable(tableName, columns.ToArray(), null);
 		}
 
 		private static DbForeignKey ParseForeignKey(string input)
 		{
-			var value = StringUtils.ExtractBetween(input, @"REFERENCES ", @")");
-			var index = value.IndexOf('(');
+			var value = ExtractBetween(input, @"REFERENCES", CloseBrace);
+			var index = value.IndexOf(OpenBrace, StringComparison.Ordinal);
 			var table = value.Substring(0, index).Trim();
 			var column = value.Substring(index + 1).Trim();
-			return new DbForeignKey(StringUtils.UpperFirst(table), StringUtils.UpperFirst(column));
+			return new DbForeignKey(table, column);
 		}
 
 		private static DbColumn ParseColumn(string input)
 		{
-			var name = input.Substring(0, input.IndexOf(' '));
-			var type = DbColumnType.Parse(StringUtils.ExtractBetween(input, @" ", @" "));
+			var name = input.Substring(0, input.IndexOf(Space, StringComparison.Ordinal));
+			var type = DbColumnType.Parse(ExtractBetween(input, Space, Space));
 			var allowNull = input.IndexOf(@"NOT NULL", StringComparison.OrdinalIgnoreCase) < 0;
 			var isPrimaryKey = input.IndexOf(@"PRIMARY KEY", StringComparison.OrdinalIgnoreCase) >= 0;
 			return new DbColumn(type, name, allowNull, isPrimaryKey);
@@ -93,19 +99,17 @@ namespace AppBuilder
 		private static void AppendCreateTableScript(StringBuilder buffer, DbTable table)
 		{
 			buffer.Append(@"CREATE TABLE");
-			buffer.Append(' ');
-			buffer.Append('[');
-			buffer.Append(table.Name);
-			buffer.Append(']');
+			buffer.Append(Space);
+			AppendWithBrackets(buffer, table.Name);
 			buffer.AppendLine();
-			buffer.AppendLine(@"(");
+			buffer.AppendLine(OpenBrace);
 
 			var columns = table.Columns;
 			for (var i = 0; i < columns.Length; i++)
 			{
 				if (i > 0)
 				{
-					buffer.Append(',');
+					buffer.Append(Comma);
 					buffer.AppendLine();
 				}
 				AppendColumnDefinition(buffer, columns[i]);
@@ -118,53 +122,84 @@ namespace AppBuilder
 				}
 			}
 			buffer.AppendLine();
-			buffer.AppendLine(@")");
+			buffer.AppendLine(CloseBrace);
 		}
 
 		private static void AppendColumnDefinition(StringBuilder buffer, DbColumn column)
 		{
-			buffer.Append('\t');
-			buffer.Append('[');
-			buffer.Append(column.Name);
-			buffer.Append(']');
-			buffer.Append(' ');
+			buffer.Append(Tab);
+			AppendWithBrackets(buffer, column.Name);
+			buffer.Append(Space);
 			buffer.Append(column.Type.Name);
-			buffer.Append(' ');
+			buffer.Append(Space);
 			buffer.Append(column.AllowNull ? @"NULL" : @"NOT NULL");
 			if (column.IsPrimaryKey)
 			{
-				buffer.Append(' ');
+				buffer.Append(Space);
 				buffer.Append(@"PRIMARY KEY AUTOINCREMENT");
 			}
 		}
 
 		private static void AppendForeignKey(StringBuilder buffer, DbColumn column)
 		{
-			buffer.Append(',');
+			buffer.Append(Comma);
 			buffer.AppendLine();
-			buffer.Append('\t');
+			buffer.Append(Tab);
 			buffer.Append(@"FOREIGN KEY");
-			buffer.Append('(');
-			buffer.Append('[');
-			buffer.Append(column.Name);
-			buffer.Append(']');
-			buffer.Append(')');
-
-			var key = column.DbForeignKey;
-			buffer.Append(' ');
+			AppendWithBraces(buffer, column.Name);
+			buffer.Append(Space);
 			buffer.Append(@"REFERENCES");
-			buffer.Append(' ');
-			buffer.Append('[');
-			buffer.Append(key.Table);
-			buffer.Append(']');
+			buffer.Append(Space);
+			AppendWithBrackets(buffer, column.DbForeignKey.Table);
+			buffer.Append(Space);
+			AppendWithBraces(buffer, column.DbForeignKey.Column);
+		}
 
-			buffer.Append(' ');
+		private static void AppendWithBraces(StringBuilder buffer, string value)
+		{
+			buffer.Append(OpenBrace);
+			AppendWithBrackets(buffer, value);
+			buffer.Append(CloseBrace);
+		}
 
-			buffer.Append('(');
+		private static void AppendWithBrackets(StringBuilder buffer, string value)
+		{
 			buffer.Append('[');
-			buffer.Append(key.Column);
+			buffer.Append(value);
 			buffer.Append(']');
-			buffer.Append(')');
+		}
+
+		private static string RemoveBrackets(string schema)
+		{
+			var buffer = new StringBuilder(schema.Length);
+
+			foreach (var symbol in schema)
+			{
+				if (symbol == '[' || symbol == ']')
+				{
+					continue;
+				}
+				buffer.Append(symbol);
+			}
+
+			return buffer.ToString();
+		}
+
+		private static string ExtractBetween(string input, string begin, string end)
+		{
+			var index = input.IndexOf(begin, StringComparison.OrdinalIgnoreCase);
+			if (index >= 0)
+			{
+				var start = index + begin.Length;
+				var stop = input.IndexOf(end, start, StringComparison.OrdinalIgnoreCase);
+				if (stop >= 0)
+				{
+					return input.Substring(start, stop - start);
+				}
+				return input.Substring(start);
+			}
+
+			return string.Empty;
 		}
 	}
 }

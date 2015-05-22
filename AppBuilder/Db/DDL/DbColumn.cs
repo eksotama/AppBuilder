@@ -8,7 +8,7 @@ namespace AppBuilder.Db.DDL
 		public string Name { get; private set; }
 		public bool AllowNull { get; private set; }
 		public bool IsPrimaryKey { get; private set; }
-		public DbForeignKey DbForeignKey { get; private set; }
+		public DbForeignKey DbForeignKey { get; set; }
 
 		public DbColumn(DbColumnType type, string name, bool allowNull = false, bool isPrimaryKey = false)
 		{
@@ -22,37 +22,20 @@ namespace AppBuilder.Db.DDL
 			this.DbForeignKey = null;
 		}
 
-		public DbColumn(DbColumnType type, string name, DbForeignKey dbForeignKey, bool allowNull = false, bool isPrimaryKey = false)
+		public static DbColumn PrimaryKey()
 		{
-			if (type == null) throw new ArgumentNullException("type");
-			if (name == null) throw new ArgumentNullException("name");
-			if (dbForeignKey == null) throw new ArgumentNullException("dbForeignKey");
-
-			this.Name = NameProvider.ToColumnName(name);
-			this.Type = type;
-			this.AllowNull = allowNull;
-			this.IsPrimaryKey = isPrimaryKey;
-			this.DbForeignKey = dbForeignKey;
+			return new DbColumn(DbColumnType.Integer, NameProvider.IdName, isPrimaryKey: true);
 		}
 
-		public static DbColumn PrimaryKey(string name)
+		public static DbColumn ForeignKey(DbTable table, bool allowNull = false)
 		{
-			if (name == null) throw new ArgumentNullException("name");
-
-			return new DbColumn(DbColumnType.Integer, name, isPrimaryKey: true);
-		}
-
-		public static DbColumn ForeignKey(string name, DbTable table, bool allowNull = false)
-		{
-			if (name == null) throw new ArgumentNullException("name");
 			if (table == null) throw new ArgumentNullException("table");
 
 			foreach (var column in table.Columns)
 			{
 				if (column.IsPrimaryKey)
 				{
-					var foreignKey = new DbForeignKey(table.Name, column.Name);
-					return new DbColumn(DbColumnType.Integer, name, foreignKey, allowNull);
+					return new DbColumn(DbColumnType.Integer, NameProvider.GetDbForeignKeyName(table.ClassName), allowNull) { DbForeignKey = new DbForeignKey(table.Name, column.Name) };
 				}
 			}
 			throw new Exception(@"No Primary Key column.");
