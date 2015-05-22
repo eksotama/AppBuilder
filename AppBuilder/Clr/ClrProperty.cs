@@ -50,5 +50,19 @@ namespace AppBuilder.Clr
 
 			return new ClrProperty(ClrType.Bytes, name);
 		}
+
+		public static ClrProperty UserType(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrProperty(ClrType.UserType(name), name);
+		}
+
+		public static ClrProperty UserCollection(string name, string typeName = null)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrProperty(ClrType.UserCollection(typeName ?? name.Substring(0, name.Length - 1)), name);
+		}
 	}
 }

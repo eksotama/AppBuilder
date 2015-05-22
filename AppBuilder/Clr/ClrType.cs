@@ -17,7 +17,7 @@ namespace AppBuilder.Clr
 		public string DefaultValue { get; private set; }
 		public string ReaderMethod { get; private set; }
 
-		public ClrType(string name, bool checkValue, bool isCollection)
+		private ClrType(string name, bool checkValue, bool isCollection)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
@@ -39,6 +39,20 @@ namespace AppBuilder.Clr
 			this.IsBuiltIn = true;
 			this.DefaultValue = defaultValue;
 			this.ReaderMethod = readerMethod;
+		}
+
+		public static ClrType UserType(string name, bool checkValue = true)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrType(name, checkValue, false);
+		}
+
+		public static ClrType UserCollection(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return new ClrType(string.Format(@"List<{0}>", name), true, true);
 		}
 	}
 }

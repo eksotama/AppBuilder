@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AppBuilder;
@@ -11,28 +12,41 @@ namespace Demo
 {
 	class Program
 	{
-		public sealed class Person
+		
+
+		public sealed class Car
 		{
 			public long Id { get; private set; }
-			public string FirstName { get; private set; }
-			public string LastName { get; private set; }
-			public long Age { get; private set; }
-			public DateTime BirthDate { get; private set; }
+			public string Name { get; private set; }
 
-			public Person(long id, string firstName, string lastName, long age, DateTime birthDate)
+			public Car(long id, string name)
 			{
-				if (firstName == null) throw new ArgumentNullException("firstName");
-				if (lastName == null) throw new ArgumentNullException("lastName");
+				if (name == null) throw new ArgumentNullException("name");
 
 				this.Id = id;
-				this.FirstName = firstName;
-				this.LastName = lastName;
-				this.Age = age;
-				this.BirthDate = birthDate;
+				this.Name = name;
+			}
+		}
+
+		public sealed class Address
+		{
+			public long Id { get; private set; }
+			public string Name { get; private set; }
+
+			public Address(long id, string name)
+			{
+				if (name == null) throw new ArgumentNullException("name");
+
+				this.Id = id;
+				this.Name = name;
 			}
 		}
 
 
+
+
+
+		
 
 
 
@@ -43,11 +57,11 @@ namespace Demo
 			var person = new ClrClass(@"Person", new[]
 			                                     {
 				                                     ClrProperty.Long(@"Id"),
-													 ClrProperty.String(@"FirstName"),
-													 ClrProperty.String(@"LastName"),
-													 ClrProperty.Long(@"Age"),
-													 ClrProperty.DateTime(@"BirthDate"),
+													 ClrProperty.String(@"Name"),
+													 ClrProperty.UserType(@"Address"),
+													 ClrProperty.UserCollection(@"Cars"),
 			                                     });
+
 			var code = ClrClassGenerator.GetCode(person);
 			Console.WriteLine(code);
 

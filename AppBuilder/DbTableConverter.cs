@@ -32,13 +32,11 @@ namespace AppBuilder
 				var type = GetClrType(column.Type);
 				if (foreignKey != null)
 				{
-					type = new ClrType(nameProvider.GetClassName(foreignKey.Table), !column.AllowNull, false);
-
+					type = ClrType.UserType(nameProvider.GetClassName(foreignKey.Table), !column.AllowNull);
 					if (referencedTables.Count > 0)
 					{
 						var t = referencedTables[0];
-						var navigationType = nameProvider.GetClassName(t.Name);
-						navigationProperties.Add(new ClrProperty(new ClrType(string.Format(@"List<{0}>", navigationType), true, true), t.Name));
+						navigationProperties.Add(ClrProperty.UserCollection(t.Name, nameProvider.GetClassName(t.Name)));
 					}
 				}
 				properties.Add(new ClrProperty(type, name));
