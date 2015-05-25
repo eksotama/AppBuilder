@@ -4,14 +4,14 @@ using AppBuilder.Clr;
 
 namespace AppBuilder
 {
-	public static class ClrClassGenerator
+	public static class ObjectGenerator
 	{
 		private static readonly char Space = ' ';
 		private static readonly char Semicolon = ';';
 		private static readonly char Comma = ',';
 		private static readonly char Tab = '\t';
 
-		public static string GetCode(ClrClass @class)
+		public static string GenerateCode(ClrClass @class)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 

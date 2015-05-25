@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+
 using System.Text;
 using AppBuilder.Db.DDL;
 
@@ -48,34 +48,65 @@ namespace AppBuilder
 			var lines = RemoveBrackets(script)
 				.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
 
-			var tableName = ExtractBetween(lines[0], @"CREATE TABLE", Environment.NewLine).Trim();
+			var tableName = ParseTableName(lines);
+			var columns = ParseTableColumns(lines);
 
-			var columns = new List<DbColumn>();
-			for (var index = 2; index < lines.Length - 1; index++)
+			return new DbTable(tableName, columns, null);
+		}
+
+		private static string ParseTableName(string[] lines)
+		{
+			return ExtractBetween(lines[0], @"CREATE TABLE", Environment.NewLine).Trim();
+		}
+
+		private static DbColumn[] ParseTableColumns(string[] lines)
+		{
+			var flag = @"FOREIGN KEY(";
+
+			var startIndex = 2;
+			var endIndex = lines.Length - 1;
+
+			var totalColumns = 0;
+			for (var i = startIndex; i < endIndex; i++)
 			{
-				var value = lines[index].Trim();
-				var columnName = ExtractBetween(value, @"FOREIGN KEY", CloseBrace);
-				if (columnName != string.Empty)
+				var line = lines[i];
+				
+				if (line[0] == Tab && line.IndexOf(flag, StringComparison.Ordinal) < 0)
 				{
-					columnName = columnName.Trim().Substring(1);
-
-					var foreignKey = ParseForeignKey(value);
-					foreach (var column in columns)
-					{
-						if (column.Name == columnName)
-						{
-							column.DbForeignKey = foreignKey;
-							break;
-						}
-					}
-				}
-				else
-				{
-					columns.Add(ParseColumn(value));
+					totalColumns++;
 				}
 			}
 
-			return new DbTable(tableName, columns.ToArray(), null);
+			var index = 0;
+			var columns = new DbColumn[totalColumns];
+			for (var i = startIndex; i < endIndex; i++)
+			{
+				var value = lines[i].Trim();
+				var foreignKeyColumn = ExtractBetween(value, flag, CloseBrace);
+				if (foreignKeyColumn != string.Empty)
+				{
+					FindColumn(columns, foreignKeyColumn).DbForeignKey = ParseForeignKey(value);
+				}
+				else
+				{
+					columns[index++] = ParseColumn(value);
+				}
+			}
+
+			return columns;
+		}
+
+		private static DbColumn FindColumn(DbColumn[] columns, string name)
+		{
+			foreach (var column in columns)
+			{
+				if (column.Name == name)
+				{
+					return column;
+				}
+			}
+
+			return null;
 		}
 
 		private static DbForeignKey ParseForeignKey(string input)

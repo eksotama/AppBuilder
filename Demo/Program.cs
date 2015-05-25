@@ -169,7 +169,7 @@ namespace Demo
 			var buffer = new StringBuilder();
 			foreach (var table in tables)
 			{
-				var code = ClrClassGenerator.GetCode(DbTableConverter.ToClrClass(table, tables));
+				var code = ObjectGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables));
 				buffer.AppendLine(code);
 			}
 			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());

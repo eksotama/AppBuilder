@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using AppBuilder.Clr;
 using AppBuilder.Db.DDL;
 
@@ -24,14 +23,26 @@ namespace AppBuilder
 			return new ClrClass(table.ClassName, GetProperties(table, tables));
 		}
 
-		private static ClrProperty[] GetProperties(DbTable inputTable, DbTable[] tables)
+		private static ClrProperty[] GetProperties(DbTable table, DbTable[] tables)
 		{
-			var columns = inputTable.Columns;
-			var properties = new List<ClrProperty>(columns.Length + 1);
+			var columns = table.Columns;
+			var collectionProperty = FindCollectionProperty(table, tables);
+
+			ClrProperty[] properties;
+			if (collectionProperty == null)
+			{
+				properties = new ClrProperty[columns.Length];
+			}
+			else
+			{
+				properties = new ClrProperty[columns.Length + 1];
+				properties[properties.Length - 1] = collectionProperty;
+			}
 
 			// Table properties
-			foreach (var column in columns)
+			for (var i = 0; i < columns.Length; i++)
 			{
+				var column = columns[i];
 				var foreignKey = column.DbForeignKey;
 
 				var type = Types[column.Type.Sequence];
@@ -41,50 +52,57 @@ namespace AppBuilder
 				{
 					var classType = string.Empty;
 					var tableName = foreignKey.Table;
-					foreach (var table in tables)
+					foreach (var t in tables)
 					{
-						if (table.Name == tableName)
+						if (t.Name == tableName)
 						{
-							classType = table.ClassName;
+							classType = t.ClassName;
 							break;
 						}
 					}
 					type = ClrType.UserType(classType, !column.AllowNull);
 				}
 
-				properties.Add(new ClrProperty(type, name));
+				properties[i] = new ClrProperty(type, name);
 			}
 
-			// Collection properties for Normal table
-			if (inputTable.IsReadOnly.HasValue && !inputTable.IsReadOnly.Value)
-			{
-				var inputTableName = inputTable.Name;
+			return properties;
+		}
 
-				foreach (var table in tables)
+		private static ClrProperty FindCollectionProperty(DbTable table, DbTable[] tables)
+		{
+			// Collection property for Normal table
+			if (table.IsReadOnly.HasValue && !table.IsReadOnly.Value)
+			{
+				foreach (var current in tables)
 				{
-					var currentTableName = table.Name;
-					if (inputTableName != currentTableName)
+					// Exclude self
+					if (table.Name == current.Name)
 					{
-						var isCollectionAdded = false;
-						foreach (var column in table.Columns)
-						{
-							var foreignKey = column.DbForeignKey;
-							if (foreignKey != null && foreignKey.Table == inputTableName)
-							{
-								properties.Add(ClrProperty.UserCollection(currentTableName, table.ClassName));
-								isCollectionAdded = true;
-								break;
-							}
-						}
-						if (isCollectionAdded)
-						{
-							break;
-						}
+						continue;
+					}
+					if (IsCollectionTable(current, table.Name))
+					{
+						return ClrProperty.UserCollection(current.Name, current.ClassName);
 					}
 				}
 			}
 
-			return properties.ToArray();
+			return null;
+		}
+
+		private static bool IsCollectionTable(DbTable table, string matchName)
+		{
+			foreach (var column in table.Columns)
+			{
+				var foreignKey = column.DbForeignKey;
+				if (foreignKey != null && foreignKey.Table == matchName)
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 	}
 }
