@@ -6,10 +6,10 @@ namespace AppBuilder.Db.DDL
 	{
 		public string Name { get; private set; }
 		public DbColumn[] Columns { get; private set; }
-		public bool? IsReadOnly { get; private set; }
+		public bool IsReadOnly { get; private set; }
 		public string ClassName { get; private set; }
 
-		public DbTable(string name, DbColumn[] columns, bool? isReadOnly, string className = null)
+		public DbTable(string name, DbColumn[] columns, bool isReadOnly, string className = null)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 			if (columns == null) throw new ArgumentNullException("columns");

@@ -57,6 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AdapterGenerator.cs" />
     <Compile Include="ObjectGenerator.cs" />
     <Compile Include="Clr\ClrClass.cs" />
     <Compile Include="ClrCodeGenerator.cs" />

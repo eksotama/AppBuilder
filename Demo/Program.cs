@@ -105,6 +105,7 @@ namespace Demo
 
 			DumpDDL(ifsa);
 			DumpClasses(ifsa);
+			DumpAdapters(ifsa);
 
 
 
@@ -174,6 +175,19 @@ namespace Demo
 			}
 			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());
 		}
+
+		private static void DumpAdapters(DbTable[] tables)
+		{
+			var buffer = new StringBuilder();
+			foreach (var table in tables)
+			{
+				var code = AdapterGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables), table);
+				buffer.AppendLine(code);
+			}
+			File.WriteAllText(@"C:\temp\ada.cs", buffer.ToString());
+		}
+
+		
 
 		//private static void Display(DbQuery query)
 		//{

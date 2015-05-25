@@ -51,7 +51,7 @@ namespace AppBuilder
 			var tableName = ParseTableName(lines);
 			var columns = ParseTableColumns(lines);
 
-			return new DbTable(tableName, columns, null);
+			return new DbTable(tableName, columns, true);
 		}
 
 		private static string ParseTableName(string[] lines)

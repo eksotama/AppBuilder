@@ -72,7 +72,7 @@ namespace AppBuilder
 		private static ClrProperty FindCollectionProperty(DbTable table, DbTable[] tables)
 		{
 			// Collection property for Normal table
-			if (table.IsReadOnly.HasValue && !table.IsReadOnly.Value)
+			if (!table.IsReadOnly)
 			{
 				foreach (var current in tables)
 				{
