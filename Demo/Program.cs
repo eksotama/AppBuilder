@@ -181,7 +181,11 @@ namespace Demo
 			var buffer = new StringBuilder();
 			foreach (var table in tables)
 			{
-				var code = AdapterGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables), table);
+				//if (table.Name != @"Articles")
+				//{
+				//	continue;
+				//}
+				var code = AdapterGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables), table, tables);
 				buffer.AppendLine(code);
 			}
 			File.WriteAllText(@"C:\temp\ada.cs", buffer.ToString());
