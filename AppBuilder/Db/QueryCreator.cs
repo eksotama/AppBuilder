@@ -212,7 +212,7 @@ namespace AppBuilder.Db
 
 			for (var i = 0; i < columns.Length; i++)
 			{
-				parameters[i] = new DbQueryParameter(@"@" + NameProvider.ToParamterName(columns[i].Name));
+				parameters[i] = new DbQueryParameter(@"@" + NameProvider.ToParameterName(columns[i].Name));
 			}
 
 			return parameters;

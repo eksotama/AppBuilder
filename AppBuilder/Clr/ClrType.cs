@@ -52,7 +52,14 @@ namespace AppBuilder.Clr
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
-			return new ClrType(string.Format(@"List<{0}>", name), true, true);
+			return new ClrType(GetUserCollectionTypeName(name), true, true);
+		}
+
+		public static string GetUserCollectionTypeName(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return string.Format(@"List<{0}>", name);
 		}
 	}
 }

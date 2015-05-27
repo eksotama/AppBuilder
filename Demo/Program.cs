@@ -7,13 +7,8 @@ using AppBuilder.Db.DDL;
 
 namespace Demo
 {
-	class Program
+	public class Program
 	{
-
-
-
-
-
 		static void Main(string[] args)
 		{
 			var articleTypes = DbTable.ReadOnly(@"ArticleTypes", new[]
@@ -89,6 +84,14 @@ namespace Demo
 															   DbColumn.DateTime(@"ValidTo"),
 			                                               }, @"Activity");
 
+			var calendarDays = DbTable.Normal(@"CalendarDays", new[]
+			                                                        {
+				                                                        DbColumn.PrimaryKey(),
+				                                                        DbColumn.DateTime(@"VisitDate"),
+				                                                        DbColumn.Integer(@"Status"),
+				                                                        DbColumn.ForeignKey(users),
+			                                                        });
+
 			var ifsa = new[]
 			           {
 						   articleTypes,
@@ -100,7 +103,8 @@ namespace Demo
 						   users,
 						   visits,
 						   activityTypes,
-						   activities
+						   activities,
+						   calendarDays
 			           };
 
 			DumpDDL(ifsa);
@@ -178,20 +182,21 @@ namespace Demo
 
 		private static void DumpAdapters(DbTable[] tables)
 		{
+			var schema = new DbSchema(string.Empty, tables);
 			var buffer = new StringBuilder();
 			foreach (var table in tables)
 			{
-				//if (table.Name != @"Articles")
-				//{
-				//	continue;
-				//}
-				var code = AdapterGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables), table, tables);
+				if (table.Name != @"CalendarDays")
+				{
+					continue;
+				}
+				var code = AdapterGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables), table, schema) + Environment.NewLine;
 				buffer.AppendLine(code);
 			}
 			File.WriteAllText(@"C:\temp\ada.cs", buffer.ToString());
 		}
 
-		
+
 
 		//private static void Display(DbQuery query)
 		//{

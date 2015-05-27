@@ -46,7 +46,7 @@ namespace AppBuilder
 			return ToUpperFirst(name);
 		}
 
-		public static string ToParamterName(string name)
+		public static string ToParameterName(string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 

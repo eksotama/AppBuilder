@@ -69,7 +69,7 @@ namespace AppBuilder
 			var parameterNames = new string[properties.Length];
 			for (var i = 0; i < parameterNames.Length; i++)
 			{
-				parameterNames[i] = NameProvider.ToParamterName(properties[i].Name);
+				parameterNames[i] = NameProvider.ToParameterName(properties[i].Name);
 			}
 			for (var i = 0; i < parameterNames.Length; i++)
 			{

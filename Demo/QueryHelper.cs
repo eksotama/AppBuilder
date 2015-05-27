@@ -105,5 +105,43 @@ namespace Demo
 				}
 			}
 		}
+
+		public static List<THeader> Get<THeader, TDetail>(string query, Func<IDataReader, long> idReader, Func<IDataReader, THeader> headerCreator, Func<IDataReader, THeader, TDetail> detailCreator, Action<THeader, TDetail> attach)
+		{
+			if (query == null) throw new ArgumentNullException("query");
+			if (idReader == null) throw new ArgumentNullException("idReader");
+			if (headerCreator == null) throw new ArgumentNullException("headerCreator");
+
+			var items = new Dictionary<long, THeader>();
+
+			using (var cmd = Connection.CreateCommand())
+			{
+				cmd.CommandType = CommandType.Text;
+				cmd.CommandText = query;
+
+				using (var r = cmd.ExecuteReader())
+				{
+					while (r.Read())
+					{
+						var id = idReader(r);
+
+						THeader header;
+						if (!items.TryGetValue(id, out header))
+						{
+							header = headerCreator(r);
+							items.Add(id, header);
+						}
+
+						attach(header, detailCreator(r, header));
+					}
+				}
+			}
+
+			var result = new List<THeader>(items.Count);
+
+			result.AddRange(items.Values);
+
+			return result;
+		}
 	}
 }
