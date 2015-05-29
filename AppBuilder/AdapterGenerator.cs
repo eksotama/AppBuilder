@@ -371,7 +371,7 @@ namespace AppBuilder
 
 			this.BeginBlock();
 			var index = 0;
-			var names = QueryCreator.GetInsertParameterNames(table);
+			var names = QueryCreator.GetParametersWithoutPrimaryKey(table);
 			foreach (var property in @class.Properties)
 			{
 				var name = property.Name;
@@ -393,17 +393,73 @@ namespace AppBuilder
 			_buffer.AppendLine(string.Format(@"{0}.Id = Convert.ToInt64(QueryHelper.ExecuteScalar(@""SELECT LAST_INSERT_ROWID()""));", varName));
 
 			this.EndBlock();
-			//public void Insert(Activity activity)
-			//{
-			//	var query = @"insert into va...";
+		}
 
-			//	var sqlParams = new []
-			//	{
-			//		QueryHelper.Create(@"", activity.Id),
-			//	};
+		public void AddUpdate(ClrClass @class, DbTable table)
+		{
+			if (@class == null) throw new ArgumentNullException("class");
+			if (table == null) throw new ArgumentNullException("table");
 
-			//	QueryHelper.Execute(query, sqlParams);
-			//}
+			var varName = NameProvider.ToParameterName(@class.Name);
+			_buffer.AppendLine(string.Format(@"public void Update({0} {1})", @class.Name, varName));
+
+			this.BeginBlock();
+
+			_buffer.AppendLine(this.GetParameterCheck(varName));
+			this.AddEmptyLine();
+
+			_buffer.AppendLine(string.Format(@"var query = @""{0}"";", QueryCreator.GetUpdate(table).Statement));
+			this.AddEmptyLine();
+			_buffer.AppendLine(@"var sqlParams = new []");
+
+			this.BeginBlock();
+			var index = 0;
+			var parameters = QueryCreator.GetParameters(table.Columns);
+			foreach (var property in @class.Properties)
+			{
+				var name = property.Name;
+				var type = property.Type;
+				if (!type.IsBuiltIn)
+				{
+					name += @"." + NameProvider.IdName;
+				}
+				_buffer.AppendLine(string.Format(@"QueryHelper.Parameter(@""{0}"", {1}.{2}),", parameters[index++].Name, varName, name));
+			}
+			this.EndBlockWith();
+
+			this.AddEmptyLine();
+
+			_buffer.AppendLine(@"QueryHelper.ExecuteQuery(query, sqlParams);");
+
+			this.EndBlock();
+		}
+
+		public void AddDelete(ClrClass @class, DbTable table)
+		{
+			if (@class == null) throw new ArgumentNullException("class");
+			if (table == null) throw new ArgumentNullException("table");
+
+			var varName = NameProvider.ToParameterName(@class.Name);
+			_buffer.AppendLine(string.Format(@"public void Delete({0} {1})", @class.Name, varName));
+
+			this.BeginBlock();
+
+			_buffer.AppendLine(this.GetParameterCheck(varName));
+			this.AddEmptyLine();
+
+			_buffer.AppendLine(string.Format(@"var query = @""{0}"";", QueryCreator.GetDelete(table).Statement));
+			this.AddEmptyLine();
+			_buffer.AppendLine(@"var sqlParams = new []");
+
+			this.BeginBlock();
+			_buffer.AppendLine(string.Format(@"QueryHelper.Parameter(@""{0}"", {1}.{0}),", NameProvider.IdName, varName));
+			this.EndBlockWith();
+
+			this.AddEmptyLine();
+
+			_buffer.AppendLine(@"QueryHelper.ExecuteQuery(query, sqlParams);");
+
+			this.EndBlock();
 		}
 	}
 
@@ -453,30 +509,24 @@ namespace AppBuilder
 				generator.AddEmptyLine();
 			}
 
+			var addGetMethod = true;
 			foreach (var property in @class.Properties)
 			{
 				var type = property.Type;
 				if (!type.IsBuiltIn)
 				{
-					var name = type.Name;
-
-					var found = false;
-					foreach (var t in foreignKeyTables)
+					if (!HasForeignKeyTableFor(foreignKeyTables, type))
 					{
-						if (t.ClassName == name)
-						{
-							found = true;
-							break;
-						}
-					}
-					if (!found)
-					{
-						// Add Get method
-						generator.AddGetMethod(@class.Name, table);
-						generator.AddEmptyLine();
+						addGetMethod = false;
 						break;
 					}
 				}
+			}
+			if (addGetMethod)
+			{
+				// Add Get method
+				generator.AddGetMethod(@class.Name, table);
+				generator.AddEmptyLine();
 			}
 
 			// Add Creator
@@ -487,9 +537,31 @@ namespace AppBuilder
 			generator.AddInsert(@class, table);
 			generator.AddEmptyLine();
 
+			// Add Update
+			generator.AddUpdate(@class, table);
+			generator.AddEmptyLine();
+
+			// Add Delete
+			generator.AddDelete(@class, table);
+
 			generator.EndBlock();
 
 			return generator.GetFormattedOutput();
+		}
+
+		private static bool HasForeignKeyTableFor(DbTable[] foreignKeyTables, ClrType type)
+		{
+			var name = type.Name;
+
+			foreach (var t in foreignKeyTables)
+			{
+				if (t.ClassName == name)
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		private static string GetAdapterReadonOnly(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
@@ -530,7 +602,7 @@ namespace AppBuilder
 
 		private static string GetAdapterWithCollection(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
 		{
-			return @"TODO !!!";
+			return @"//TODO !!!";
 		}
 
 

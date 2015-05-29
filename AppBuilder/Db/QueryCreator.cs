@@ -127,7 +127,7 @@ namespace AppBuilder.Db
 		{
 			var buffer = new StringBuilder(256);
 
-			var columns = ExcludePrimaryKey(table.Columns);
+			var columns = table.Columns;
 			var updateColumns = GetUpdatableColumns(columns);
 			var updateParameters = GetParameters(updateColumns);
 
@@ -160,11 +160,12 @@ namespace AppBuilder.Db
 			return buffer;
 		}
 
-		public static string[] GetInsertParameterNames(DbTable table)
+		public static string[] GetParametersWithoutPrimaryKey(DbTable table)
 		{
 			if (table == null) throw new ArgumentNullException("table");
 
 			var parameters = GetParameters(ExcludePrimaryKey(table.Columns));
+
 			var names = new string[parameters.Length];
 
 			for (var i = 0; i < parameters.Length; i++)
@@ -174,6 +175,20 @@ namespace AppBuilder.Db
 
 			return names;
 		}
+
+		public static DbQueryParameter[] GetParameters(DbColumn[] columns)
+		{
+			var parameters = new DbQueryParameter[columns.Length];
+
+			for (var i = 0; i < columns.Length; i++)
+			{
+				parameters[i] = new DbQueryParameter(@"@" + NameProvider.ToParameterName(columns[i].Name));
+			}
+
+			return parameters;
+		}
+
+		
 
 		private static DbColumn[] ExcludePrimaryKey(DbColumn[] columns)
 		{
@@ -196,7 +211,7 @@ namespace AppBuilder.Db
 			var names = new string[columns.Length];
 			for (var i = 0; i < names.Length; i++)
 			{
-				names[i] = columns[i] + @" = " + parameters[i];
+				names[i] = columns[i].Name + @" = " + parameters[i].Name;
 			}
 
 			AppendNames(buffer, names);
@@ -239,17 +254,7 @@ namespace AppBuilder.Db
 			buffer.Append(@", ");
 		}
 
-		private static DbQueryParameter[] GetParameters(DbColumn[] columns)
-		{
-			var parameters = new DbQueryParameter[columns.Length];
-
-			for (var i = 0; i < columns.Length; i++)
-			{
-				parameters[i] = new DbQueryParameter(@"@" + NameProvider.ToParameterName(columns[i].Name));
-			}
-
-			return parameters;
-		}
+		
 
 		private static DbColumn GetPrimaryKey(DbColumn[] columns)
 		{
@@ -318,6 +323,6 @@ namespace AppBuilder.Db
 			return names;
 		}
 
-		
+
 	}
 }

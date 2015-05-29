@@ -130,7 +130,7 @@ namespace Demo
 
 	public sealed class Visit
 	{
-		public long Id { get; private set; }
+		public long Id { get; set; }
 		public DateTime Date { get; private set; }
 		public Outlet Outlet { get; private set; }
 		public User User { get; private set; }
@@ -190,7 +190,7 @@ namespace Demo
 
 	public sealed class CalendarDay
 	{
-		public long Id { get; private set; }
+		public long Id { get; set; }
 		public DateTime VisitDate { get; private set; }
 		public long Status { get; private set; }
 		public User User { get; private set; }
@@ -206,34 +206,299 @@ namespace Demo
 		}
 	}
 
+	public sealed class LogMessage
+	{
+		public long Id { get; set; }
+		public DateTime Time { get; private set; }
+		public string Type { get; private set; }
+		public string Message { get; private set; }
+
+		public LogMessage(long id, DateTime time, string type, string message)
+		{
+			if (type == null) throw new ArgumentNullException("type");
+			if (message == null) throw new ArgumentNullException("message");
+
+			this.Id = id;
+			this.Time = time;
+			this.Type = type;
+			this.Message = message;
+		}
+	}
 
 
 
 
+	//TODO !!!
+
+	public sealed class ActivitiesAdapter
+	{
+		private readonly Dictionary<long, ActivityType> _activityTypes;
+
+		public ActivitiesAdapter(Dictionary<long, ActivityType> activityTypes)
+		{
+			if (activityTypes == null) throw new ArgumentNullException("activityTypes");
+
+			_activityTypes = activityTypes;
+		}
+
+		public Activity Creator(IDataReader r, Visit visit)
+		{
+			if (r == null) throw new ArgumentNullException("r");
+			if (visit == null) throw new ArgumentNullException("visit");
+
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var activityType = default(ActivityType);
+			if (!r.IsDBNull(1))
+			{
+				activityType = _activityTypes[r.GetInt64(1)];
+			}
+			var validFrom = DateTime.MinValue;
+			if (!r.IsDBNull(2))
+			{
+				validFrom = r.GetDateTime(2);
+			}
+			var validTo = DateTime.MinValue;
+			if (!r.IsDBNull(3))
+			{
+				validTo = r.GetDateTime(3);
+			}
+
+			return new Activity(id, activityType, visit, validFrom, validTo);
+		}
+
+		public void Insert(Activity activity)
+		{
+			if (activity == null) throw new ArgumentNullException("activity");
+
+			var query = @"INSERT INTO Activities(ActivityTypeId, VisitId, ValidFrom, ValidTo) VALUES (@activityTypeId, @visitId, @validFrom, @validTo)";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@activityTypeId", activity.ActivityType.Id),
+			QueryHelper.Parameter(@"@visitId", activity.Visit.Id),
+			QueryHelper.Parameter(@"@validFrom", activity.ValidFrom),
+			QueryHelper.Parameter(@"@validTo", activity.ValidTo),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+			activity.Id = Convert.ToInt64(QueryHelper.ExecuteScalar(@"SELECT LAST_INSERT_ROWID()"));
+		}
+
+		public void Update(Activity activity)
+		{
+			if (activity == null) throw new ArgumentNullException("activity");
+
+			var query = @"UPDATE Activities SET ActivityTypeId = @activityTypeId, VisitId = @visitId, ValidFrom = @validFrom, ValidTo = @validTo WHERE Id = @id";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@id", activity.Id),
+			QueryHelper.Parameter(@"@activityTypeId", activity.ActivityType.Id),
+			QueryHelper.Parameter(@"@visitId", activity.Visit.Id),
+			QueryHelper.Parameter(@"@validFrom", activity.ValidFrom),
+			QueryHelper.Parameter(@"@validTo", activity.ValidTo),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
+
+		public void Delete(Activity activity)
+		{
+			if (activity == null) throw new ArgumentNullException("activity");
+
+			var query = @"DELETE FROM Activities WHERE Id = @id";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"Id", activity.Id),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
+	}
 
 
+	public sealed class CalendarDaysAdapter
+	{
+		private readonly Dictionary<long, User> _users;
 
-	
+		public CalendarDaysAdapter(Dictionary<long, User> users)
+		{
+			if (users == null) throw new ArgumentNullException("users");
+
+			_users = users;
+		}
+
+		public List<CalendarDay> GetAll()
+		{
+			var query = @"SELECT Id, VisitDate, Status, UserId FROM CalendarDays";
+
+			return QueryHelper.Get(query, this.Creator);
+		}
+
+		private CalendarDay Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var visitDate = DateTime.MinValue;
+			if (!r.IsDBNull(1))
+			{
+				visitDate = r.GetDateTime(1);
+			}
+			var status = 0L;
+			if (!r.IsDBNull(2))
+			{
+				status = r.GetInt64(2);
+			}
+			var user = default(User);
+			if (!r.IsDBNull(3))
+			{
+				user = _users[r.GetInt64(3)];
+			}
+
+			return new CalendarDay(id, visitDate, status, user);
+		}
+
+		public void Insert(CalendarDay calendarDay)
+		{
+			if (calendarDay == null) throw new ArgumentNullException("calendarDay");
+
+			var query = @"INSERT INTO CalendarDays(VisitDate, Status, UserId) VALUES (@visitDate, @status, @userId)";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@visitDate", calendarDay.VisitDate),
+			QueryHelper.Parameter(@"@status", calendarDay.Status),
+			QueryHelper.Parameter(@"@userId", calendarDay.User.Id),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+			calendarDay.Id = Convert.ToInt64(QueryHelper.ExecuteScalar(@"SELECT LAST_INSERT_ROWID()"));
+		}
+
+		public void Update(CalendarDay calendarDay)
+		{
+			if (calendarDay == null) throw new ArgumentNullException("calendarDay");
+
+			var query = @"UPDATE CalendarDays SET VisitDate = @visitDate, Status = @status, UserId = @userId WHERE Id = @id";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@id", calendarDay.Id),
+			QueryHelper.Parameter(@"@visitDate", calendarDay.VisitDate),
+			QueryHelper.Parameter(@"@status", calendarDay.Status),
+			QueryHelper.Parameter(@"@userId", calendarDay.User.Id),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
+
+		public void Delete(CalendarDay calendarDay)
+		{
+			if (calendarDay == null) throw new ArgumentNullException("calendarDay");
+
+			var query = @"DELETE FROM CalendarDays WHERE Id = @id";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"Id", calendarDay.Id),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
+	}
 
 
+	public sealed class LogMessagesAdapter
+	{
+		public List<LogMessage> GetAll()
+		{
+			var query = @"SELECT Id, Time, Type, Message FROM LogMessages";
 
+			return QueryHelper.Get(query, this.Creator);
+		}
 
+		private LogMessage Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var time = DateTime.MinValue;
+			if (!r.IsDBNull(1))
+			{
+				time = r.GetDateTime(1);
+			}
+			var type = string.Empty;
+			if (!r.IsDBNull(2))
+			{
+				type = r.GetString(2);
+			}
+			var message = string.Empty;
+			if (!r.IsDBNull(3))
+			{
+				message = r.GetString(3);
+			}
 
+			return new LogMessage(id, time, type, message);
+		}
 
+		public void Insert(LogMessage logMessage)
+		{
+			if (logMessage == null) throw new ArgumentNullException("logMessage");
 
+			var query = @"INSERT INTO LogMessages(Time, Type, Message) VALUES (@time, @type, @message)";
 
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@time", logMessage.Time),
+			QueryHelper.Parameter(@"@type", logMessage.Type),
+			QueryHelper.Parameter(@"@message", logMessage.Message),
+		};
 
+			QueryHelper.ExecuteQuery(query, sqlParams);
+			logMessage.Id = Convert.ToInt64(QueryHelper.ExecuteScalar(@"SELECT LAST_INSERT_ROWID()"));
+		}
 
+		public void Update(LogMessage logMessage)
+		{
+			if (logMessage == null) throw new ArgumentNullException("logMessage");
 
+			var query = @"UPDATE LogMessages SET Time = @time, Type = @type, Message = @message WHERE Id = @id";
 
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@id", logMessage.Id),
+			QueryHelper.Parameter(@"@time", logMessage.Time),
+			QueryHelper.Parameter(@"@type", logMessage.Type),
+			QueryHelper.Parameter(@"@message", logMessage.Message),
+		};
 
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
 
+		public void Delete(LogMessage logMessage)
+		{
+			if (logMessage == null) throw new ArgumentNullException("logMessage");
 
+			var query = @"DELETE FROM LogMessages WHERE Id = @id";
 
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"Id", logMessage.Id),
+		};
 
-
-
-
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
+	}
 
 
 

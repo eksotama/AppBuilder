@@ -11,7 +11,7 @@ namespace AppBuilder
 		private static readonly char Comma = ',';
 		private static readonly char Tab = '\t';
 
-		public static string GenerateCode(ClrClass @class)
+		public static string GenerateCode(ClrClass @class, bool readOnly)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
 
@@ -31,7 +31,7 @@ namespace AppBuilder
 
 			buffer.AppendLine(@"{");
 
-			AppendProperties(properties, buffer);
+			AppendProperties(properties, buffer, readOnly);
 			AppendContructor(name, properties, buffer);
 
 			buffer.AppendLine(@"}");
@@ -39,7 +39,7 @@ namespace AppBuilder
 			return buffer.ToString();
 		}
 
-		private static void AppendProperties(ClrProperty[] properties, StringBuilder buffer)
+		private static void AppendProperties(ClrProperty[] properties, StringBuilder buffer, bool readOnly)
 		{
 			foreach (var property in properties)
 			{
@@ -48,9 +48,15 @@ namespace AppBuilder
 				buffer.Append(Space);
 				buffer.Append(property.Type.Name);
 				buffer.Append(Space);
-				buffer.Append(property.Name);
+				var name = property.Name;
+				buffer.Append(name);
 				buffer.Append(Space);
-				buffer.Append(@"{ get; private set; }");
+				var access = @"{ get; private set; }";
+				if (!readOnly && name == NameProvider.IdName)
+				{
+					access = @"{ get; set; }";
+				}
+				buffer.Append(access);
 				buffer.AppendLine();
 			}
 

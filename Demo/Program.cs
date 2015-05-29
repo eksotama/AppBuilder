@@ -24,7 +24,7 @@ namespace Demo
 			//		Console.WriteLine(bd);
 			//	}
 
-				
+
 
 			//	QueryHelper.ExecuteQuery(@"insert into brands(name) values('A')");
 			//	var value = QueryHelper.ExecuteScalar(@"SELECT LAST_INSERT_ROWID()");
@@ -115,6 +115,14 @@ namespace Demo
 				                                                        DbColumn.ForeignKey(users),
 			                                                        });
 
+			var logs = DbTable.Normal(@"LogMessages", new[]
+			                                                        {
+				                                                        DbColumn.PrimaryKey(),
+				                                                        DbColumn.DateTime(@"Time"),
+				                                                        DbColumn.String(@"Type"),
+				                                                        DbColumn.String(@"Message"),
+			                                                        });
+
 			var ifsa = new[]
 			           {
 						   articleTypes,
@@ -127,7 +135,8 @@ namespace Demo
 						   visits,
 						   activityTypes,
 						   activities,
-						   calendarDays
+						   calendarDays,
+						   logs
 			           };
 
 			DumpDDL(ifsa);
@@ -197,7 +206,7 @@ namespace Demo
 			var buffer = new StringBuilder();
 			foreach (var table in tables)
 			{
-				var code = ObjectGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables));
+				var code = ObjectGenerator.GenerateCode(DbTableConverter.ToClrClass(table, tables), table.IsReadOnly);
 				buffer.AppendLine(code);
 			}
 			File.WriteAllText(@"C:\temp\obj.cs", buffer.ToString());
@@ -211,8 +220,8 @@ namespace Demo
 			{
 				//if ( table.Name != @"Brands")
 				//if (table.Name != @"Articles")
-				//if (table.IsReadOnly)
-				if (table.Name != @"Activities")
+				if (table.IsReadOnly)
+				//if (table.Name != @"Activities")
 				//if (table.Name != @"CalendarDays")
 				//if (false)
 				{
