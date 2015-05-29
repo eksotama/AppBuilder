@@ -34,12 +34,15 @@ namespace AppBuilder.Db
 			if (headerTable == null) throw new ArgumentNullException("headerTable");
 			if (detailsTable == null) throw new ArgumentNullException("detailsTable");
 
+			// TOOD : !!! single letters and only if thre's a clash, use _			
 			var headerAlias = @"_" + char.ToLowerInvariant(headerTable.Name[0]);
 			var detailsAlias = @"_" + char.ToLowerInvariant(detailsTable.Name[0]);
 			if (headerAlias == detailsAlias)
 			{
 				detailsAlias += @"1";
 			}
+
+			// TODO : !!! Select details first
 			var primaryKeyColumn = GetPrimaryKey(headerTable.Columns);
 			var foreignKeyColumn = GetForeignKey(detailsTable.Columns, headerTable);
 
@@ -188,8 +191,6 @@ namespace AppBuilder.Db
 			return parameters;
 		}
 
-		
-
 		private static DbColumn[] ExcludePrimaryKey(DbColumn[] columns)
 		{
 			var result = new DbColumn[columns.Length - 1];
@@ -254,7 +255,7 @@ namespace AppBuilder.Db
 			buffer.Append(@", ");
 		}
 
-		
+
 
 		private static DbColumn GetPrimaryKey(DbColumn[] columns)
 		{

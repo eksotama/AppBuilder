@@ -126,6 +126,8 @@ namespace Demo
 		}
 
 		public static List<THeader> Get<THeader, TDetail>(string query, Func<IDataReader, long> idReader, Func<IDataReader, THeader> headerCreator, Func<IDataReader, THeader, TDetail> detailCreator, Action<THeader, TDetail> attach)
+			where THeader : class
+			where TDetail : class
 		{
 			if (query == null) throw new ArgumentNullException("query");
 			if (idReader == null) throw new ArgumentNullException("idReader");
@@ -151,7 +153,12 @@ namespace Demo
 							items.Add(id, header);
 						}
 
-						attach(header, detailCreator(r, header));
+						var detail = detailCreator(r, header);
+						// Left Join support
+						if (detail != null)
+						{
+							attach(header, detail);
+						}
 					}
 				}
 			}
@@ -162,7 +169,5 @@ namespace Demo
 
 			return result;
 		}
-
-
 	}
 }

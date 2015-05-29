@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using AppBuilder.Clr;
 using AppBuilder.Db;
@@ -260,6 +261,21 @@ namespace AppBuilder
 			this.EndBlock();
 		}
 
+		public void AddGetWithDetailsMethod(string className, DbTable table, DbTable detailsTable)
+		{
+			_buffer.AppendLine(string.Format(@"public List<{0}> GetAll()", className));
+
+			this.BeginBlock();
+
+			//return QueryHelper.Get<Visit, Activity>(query, this.IdReader, this.Creator, null, null);
+
+			_buffer.AppendLine(string.Format(@"var query = @""{0}"";", QueryCreator.GetSelect(table, detailsTable).Statement));
+			this.AddEmptyLine();
+			_buffer.AppendLine(@"return QueryHelper.Get(query, this.IdReader, this.Creator);");
+
+			this.EndBlock();
+		}
+
 		public void AddCreator(ClrClass @class, Field[] fields)
 		{
 			var properties = @class.Properties;
@@ -268,7 +284,13 @@ namespace AppBuilder
 			var names = new string[properties.Length];
 			foreach (var property in properties)
 			{
-				names[index++] = NameProvider.ToParameterName(property.Name);
+				var name = NameProvider.ToParameterName(property.Name);
+				var type = property.Type;
+				if (type.IsCollection)
+				{
+					name = @"new " + type.Name + @"()";
+				}
+				names[index++] = name;
 			}
 
 			Field parameter = null;
@@ -278,7 +300,7 @@ namespace AppBuilder
 				var name = names[i];
 				var type = property.Type;
 				var readValue = type.IsBuiltIn || (FindFieldByType(fields, property.Type)) != null;
-				if (!readValue)
+				if (!readValue && !type.IsCollection)
 				{
 					parameter = new Field(type.Name, name);
 				}
@@ -354,11 +376,12 @@ namespace AppBuilder
 
 		public void AddInsert(ClrClass @class, DbTable table)
 		{
-			if (@class == null) throw new ArgumentNullException("class");
 			if (table == null) throw new ArgumentNullException("table");
 
-			var varName = NameProvider.ToParameterName(@class.Name);
-			_buffer.AppendLine(string.Format(@"public void Insert({0} {1})", @class.Name, varName));
+			var className = table.ClassName;
+
+			var varName = NameProvider.ToParameterName(className);
+			_buffer.AppendLine(string.Format(@"public void Insert({0} {1})", className, varName));
 
 			this.BeginBlock();
 
@@ -374,10 +397,14 @@ namespace AppBuilder
 			var names = QueryCreator.GetParametersWithoutPrimaryKey(table);
 			foreach (var property in @class.Properties)
 			{
+				var type = property.Type;
+				if (type.IsCollection)
+				{
+					continue;
+				}
 				var name = property.Name;
 				if (name != NameProvider.IdName)
 				{
-					var type = property.Type;
 					if (!type.IsBuiltIn)
 					{
 						name += @"." + NameProvider.IdName;
@@ -417,8 +444,13 @@ namespace AppBuilder
 			var parameters = QueryCreator.GetParameters(table.Columns);
 			foreach (var property in @class.Properties)
 			{
-				var name = property.Name;
 				var type = property.Type;
+				if (type.IsCollection)
+				{
+					continue;
+				}
+
+				var name = property.Name;
 				if (!type.IsBuiltIn)
 				{
 					name += @"." + NameProvider.IdName;
@@ -465,11 +497,6 @@ namespace AppBuilder
 
 	public static class AdapterGenerator
 	{
-		private static readonly char Space = ' ';
-		private static readonly char Semicolon = ';';
-		private static readonly char Comma = ',';
-		private static readonly char Tab = '\t';
-
 		public static string GenerateCode(ClrClass @class, DbTable table, DbSchema schema)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
@@ -486,7 +513,20 @@ namespace AppBuilder
 			{
 				return GetAdapter(@class, table, foreignKeyTables);
 			}
-			return GetAdapterWithCollection(@class, table, foreignKeyTables);
+
+
+			var collectionTable = default(DbTable);
+
+			var typeName = collectionType.Name;
+			foreach (var t in schema.Tables)
+			{
+				if (ClrType.GetUserCollectionTypeName(t.ClassName) == typeName)
+				{
+					collectionTable = t;
+					break;
+				}
+			}
+			return GetAdapterWithCollection(@class, table, foreignKeyTables, collectionTable);
 		}
 
 		private static string GetAdapter(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
@@ -549,21 +589,6 @@ namespace AppBuilder
 			return generator.GetFormattedOutput();
 		}
 
-		private static bool HasForeignKeyTableFor(DbTable[] foreignKeyTables, ClrType type)
-		{
-			var name = type.Name;
-
-			foreach (var t in foreignKeyTables)
-			{
-				if (t.ClassName == name)
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-
 		private static string GetAdapterReadonOnly(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
 		{
 			var generator = new CodeGenerator();
@@ -600,7 +625,7 @@ namespace AppBuilder
 			return generator.GetFormattedOutput();
 		}
 
-		private static string GetAdapterWithCollection(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
+		private static string GetAdapterWithCollection(ClrClass @class, DbTable table, DbTable[] foreignKeyTables, DbTable detailsTable)
 		{
 			var generator = new CodeGenerator();
 
@@ -620,28 +645,12 @@ namespace AppBuilder
 				generator.AddEmptyLine();
 			}
 
-			var addGetMethod = true;
-			foreach (var property in @class.Properties)
-			{
-				var type = property.Type;
-				if (!type.IsBuiltIn)
-				{
-					if (!HasForeignKeyTableFor(foreignKeyTables, type))
-					{
-						addGetMethod = false;
-						break;
-					}
-				}
-			}
-			if (addGetMethod)
-			{
-				// Add Get method
-				generator.AddGetMethod(@class.Name, table);
-				generator.AddEmptyLine();
-			}
+			// Add Get method
+			generator.AddGetWithDetailsMethod(@class.Name, table, detailsTable);
+			generator.AddEmptyLine();
 
 			// Add Creator
-			//generator.AddCreator(@class, fields);
+			generator.AddCreator(@class, fields);
 			generator.AddEmptyLine();
 
 			// Add Insert
@@ -660,131 +669,139 @@ namespace AppBuilder
 			return generator.GetFormattedOutput();
 		}
 
-
-
-
-
-
-
-
-		private static void AppendIdReaderMethod(StringBuilder buffer)
+		private static bool HasForeignKeyTableFor(DbTable[] foreignKeyTables, ClrType type)
 		{
-			buffer.AppendLine();
-			buffer.Append(Tab);
-			buffer.AppendFormat(@"private long IdReader(IDataReader r) {{ return r.GetInt64(0); }}");
-			buffer.AppendLine();
-		}
+			var name = type.Name;
 
-		private static void AppendFields(StringBuilder buffer, DbTable[] tables)
-		{
-			foreach (var table in tables)
+			foreach (var t in foreignKeyTables)
 			{
-				buffer.Append(Tab);
-				buffer.AppendFormat(@"private readonly Dictionary<long, {0}> _{1};", table.ClassName, NameProvider.ToParameterName(table.Name));
-				buffer.AppendLine();
-			}
-		}
-
-		private static void AppendContructor(StringBuilder buffer, string tableName, DbTable[] tables)
-		{
-			buffer.Append(Tab);
-			buffer.Append(@"public");
-			buffer.Append(Space);
-			buffer.Append(tableName);
-			buffer.Append(@"Adapter");
-			buffer.Append(@"(");
-
-			var parameterNames = new string[tables.Length];
-			for (var i = 0; i < tables.Length; i++)
-			{
-				var table = tables[i];
-				if (i > 0)
+				if (t.ClassName == name)
 				{
-					buffer.Append(Comma);
-					buffer.Append(Space);
+					return true;
 				}
-				var name = parameterNames[i] = NameProvider.ToParameterName(table.Name);
-				buffer.AppendFormat(@"Dictionary<long, {0}> {1}", table.ClassName, name);
-			}
-			buffer.AppendLine(@")");
-			buffer.Append(Tab);
-			buffer.AppendLine(@"{");
-
-			foreach (var name in parameterNames)
-			{
-				//AppendParameterCheck(buffer, name);
 			}
 
-			buffer.AppendLine();
-
-			foreach (var name in parameterNames)
-			{
-				buffer.Append(Tab);
-				buffer.Append(Tab);
-				buffer.Append('_');
-				buffer.Append(name);
-				buffer.Append(@" = ");
-				buffer.Append(name);
-				buffer.Append(Semicolon);
-				buffer.AppendLine();
-			}
-
-			buffer.Append(Tab);
-			buffer.AppendLine(@"}");
+			return false;
 		}
 
-		private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, DbTable[] foreignKeyTables, int indexOffset = 0)
-		{
-			buffer.AppendLine();
-			buffer.Append(Tab);
-			buffer.AppendFormat(@"private {0} {0}Creator(IDataReader r)", @class.Name);
-			buffer.AppendLine();
+		//private static void AppendIdReaderMethod(StringBuilder buffer)
+		//{
+		//	buffer.AppendLine();
+		//	buffer.Append(Tab);
+		//	buffer.AppendFormat(@"private long IdReader(IDataReader r) {{ return r.GetInt64(0); }}");
+		//	buffer.AppendLine();
+		//}
 
-			buffer.Append(Tab);
-			buffer.AppendLine(@"{");
+		//private static void AppendFields(StringBuilder buffer, DbTable[] tables)
+		//{
+		//	foreach (var table in tables)
+		//	{
+		//		buffer.Append(Tab);
+		//		buffer.AppendFormat(@"private readonly Dictionary<long, {0}> _{1};", table.ClassName, NameProvider.ToParameterName(table.Name));
+		//		buffer.AppendLine();
+		//	}
+		//}
 
-			var parameters = GetParameters(@class);
+		//private static void AppendContructor(StringBuilder buffer, string tableName, DbTable[] tables)
+		//{
+		//	buffer.Append(Tab);
+		//	buffer.Append(@"public");
+		//	buffer.Append(Space);
+		//	buffer.Append(tableName);
+		//	buffer.Append(@"Adapter");
+		//	buffer.Append(@"(");
 
-			//AppendParameters(buffer, @class.Name, parameters);
+		//	var parameterNames = new string[tables.Length];
+		//	for (var i = 0; i < tables.Length; i++)
+		//	{
+		//		var table = tables[i];
+		//		if (i > 0)
+		//		{
+		//			buffer.Append(Comma);
+		//			buffer.Append(Space);
+		//		}
+		//		var name = parameterNames[i] = NameProvider.ToParameterName(table.Name);
+		//		buffer.AppendFormat(@"Dictionary<long, {0}> {1}", table.ClassName, name);
+		//	}
+		//	buffer.AppendLine(@")");
+		//	buffer.Append(Tab);
+		//	buffer.AppendLine(@"{");
 
-			buffer.Append(Tab);
-			buffer.AppendLine(@"}");
-		}
+		//	foreach (var name in parameterNames)
+		//	{
+		//		//AppendParameterCheck(buffer, name);
+		//	}
 
-		private static Tuple<ClrType, string>[] GetParameters(ClrClass @class)
-		{
-			var index = 0;
-			var properties = @class.Properties;
-			var parameters = new Tuple<ClrType, string>[properties.Length];
+		//	buffer.AppendLine();
 
-			foreach (var property in properties)
-			{
-				parameters[index++] = Tuple.Create(property.Type, NameProvider.ToParameterName(property.Name));
-			}
+		//	foreach (var name in parameterNames)
+		//	{
+		//		buffer.Append(Tab);
+		//		buffer.Append(Tab);
+		//		buffer.Append('_');
+		//		buffer.Append(name);
+		//		buffer.Append(@" = ");
+		//		buffer.Append(name);
+		//		buffer.Append(Semicolon);
+		//		buffer.AppendLine();
+		//	}
 
-			return parameters;
-		}
+		//	buffer.Append(Tab);
+		//	buffer.AppendLine(@"}");
+		//}
 
-		private static void AppendParameters(StringBuilder buffer, string className, string[] parameters)
-		{
-			buffer.Append(Tab);
-			buffer.Append(Tab);
-			buffer.Append(@"return new");
-			buffer.Append(Space);
-			buffer.Append(className);
-			buffer.Append('(');
-			for (var i = 0; i < parameters.Length; i++)
-			{
-				if (i > 0)
-				{
-					buffer.Append(Comma);
-					buffer.Append(Space);
-				}
-				buffer.Append(parameters[i]);
-			}
-			buffer.Append(')');
-			buffer.Append(Semicolon);
-			buffer.AppendLine();
-		}
+		//private static void AppendCreatorMethod(StringBuilder buffer, ClrClass @class, DbTable[] foreignKeyTables, int indexOffset = 0)
+		//{
+		//	buffer.AppendLine();
+		//	buffer.Append(Tab);
+		//	buffer.AppendFormat(@"private {0} {0}Creator(IDataReader r)", @class.Name);
+		//	buffer.AppendLine();
+
+		//	buffer.Append(Tab);
+		//	buffer.AppendLine(@"{");
+
+		//	var parameters = GetParameters(@class);
+
+		//	//AppendParameters(buffer, @class.Name, parameters);
+
+		//	buffer.Append(Tab);
+		//	buffer.AppendLine(@"}");
+		//}
+
+		//private static Tuple<ClrType, string>[] GetParameters(ClrClass @class)
+		//{
+		//	var index = 0;
+		//	var properties = @class.Properties;
+		//	var parameters = new Tuple<ClrType, string>[properties.Length];
+
+		//	foreach (var property in properties)
+		//	{
+		//		parameters[index++] = Tuple.Create(property.Type, NameProvider.ToParameterName(property.Name));
+		//	}
+
+		//	return parameters;
+		//}
+
+		//private static void AppendParameters(StringBuilder buffer, string className, string[] parameters)
+		//{
+		//	buffer.Append(Tab);
+		//	buffer.Append(Tab);
+		//	buffer.Append(@"return new");
+		//	buffer.Append(Space);
+		//	buffer.Append(className);
+		//	buffer.Append('(');
+		//	for (var i = 0; i < parameters.Length; i++)
+		//	{
+		//		if (i > 0)
+		//		{
+		//			buffer.Append(Comma);
+		//			buffer.Append(Space);
+		//		}
+		//		buffer.Append(parameters[i]);
+		//	}
+		//	buffer.Append(')');
+		//	buffer.Append(Semicolon);
+		//	buffer.AppendLine();
+		//}
 	}
 }
