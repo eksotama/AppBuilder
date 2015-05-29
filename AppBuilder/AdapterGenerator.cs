@@ -602,7 +602,62 @@ namespace AppBuilder
 
 		private static string GetAdapterWithCollection(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
 		{
-			return @"//TODO !!!";
+			var generator = new CodeGenerator();
+
+			var className = string.Format(@"{0}Adapter", table.Name);
+			generator.AddClassDefinition(className);
+
+			generator.BeginBlock();
+			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
+			if (fields.Length > 0)
+			{
+				// Add fields
+				generator.AddDictionaryFields(fields);
+				generator.AddEmptyLine();
+
+				// Add contructor
+				generator.AddContructor(fields, className);
+				generator.AddEmptyLine();
+			}
+
+			var addGetMethod = true;
+			foreach (var property in @class.Properties)
+			{
+				var type = property.Type;
+				if (!type.IsBuiltIn)
+				{
+					if (!HasForeignKeyTableFor(foreignKeyTables, type))
+					{
+						addGetMethod = false;
+						break;
+					}
+				}
+			}
+			if (addGetMethod)
+			{
+				// Add Get method
+				generator.AddGetMethod(@class.Name, table);
+				generator.AddEmptyLine();
+			}
+
+			// Add Creator
+			//generator.AddCreator(@class, fields);
+			generator.AddEmptyLine();
+
+			// Add Insert
+			generator.AddInsert(@class, table);
+			generator.AddEmptyLine();
+
+			// Add Update
+			generator.AddUpdate(@class, table);
+			generator.AddEmptyLine();
+
+			// Add Delete
+			generator.AddDelete(@class, table);
+
+			generator.EndBlock();
+
+			return generator.GetFormattedOutput();
 		}
 
 
