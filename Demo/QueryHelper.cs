@@ -7,6 +7,25 @@ namespace Demo
 	public static class QueryHelper
 	{
 		public static IDbConnection Connection { get; set; }
+		public static Func<string, object, IDbDataParameter> ParameterCreator;
+
+		public static IDbDataParameter Parameter(string name, object value)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			return ParameterCreator(name, value ?? DBNull.Value);
+		}
+
+		public static object ExecuteScalar(string query)
+		{
+			using (var cmd = Connection.CreateCommand())
+			{
+				cmd.CommandType = CommandType.Text;
+				cmd.CommandText = query;
+
+				return cmd.ExecuteScalar();
+			}
+		}
 
 		public static int ExecuteQuery(string query)
 		{
@@ -143,5 +162,7 @@ namespace Demo
 
 			return result;
 		}
+
+
 	}
 }

@@ -112,11 +112,12 @@ namespace AppBuilder.Db
 			buffer.Append(@"INSERT INTO ");
 			buffer.Append(table.Name);
 			buffer.Append('(');
-			AppendColumnNames(buffer, table.Columns);
+			var columns = ExcludePrimaryKey(table.Columns);
+			AppendColumnNames(buffer, columns);
 			buffer.Append(')');
 			buffer.Append(@" VALUES ");
 			buffer.Append('(');
-			AppendParameterNames(buffer, GetParameters(table.Columns));
+			AppendParameterNames(buffer, GetParameters(columns));
 			buffer.Append(')');
 
 			return buffer;
@@ -126,10 +127,11 @@ namespace AppBuilder.Db
 		{
 			var buffer = new StringBuilder(256);
 
-			var updateColumns = GetUpdatableColumns(table.Columns);
+			var columns = ExcludePrimaryKey(table.Columns);
+			var updateColumns = GetUpdatableColumns(columns);
 			var updateParameters = GetParameters(updateColumns);
 
-			var primaryKeyColumns = new[] { GetPrimaryKey(table.Columns) };
+			var primaryKeyColumns = new[] { GetPrimaryKey(columns) };
 			var primaryKeyParameters = GetParameters(primaryKeyColumns);
 
 			buffer.Append(@"UPDATE ");
@@ -156,6 +158,37 @@ namespace AppBuilder.Db
 			AppendParameters(buffer, primaryKeyColumns, primaryKeyParameters);
 
 			return buffer;
+		}
+
+		public static string[] GetInsertParameterNames(DbTable table)
+		{
+			if (table == null) throw new ArgumentNullException("table");
+
+			var parameters = GetParameters(ExcludePrimaryKey(table.Columns));
+			var names = new string[parameters.Length];
+
+			for (var i = 0; i < parameters.Length; i++)
+			{
+				names[i] = parameters[i].Name;
+			}
+
+			return names;
+		}
+
+		private static DbColumn[] ExcludePrimaryKey(DbColumn[] columns)
+		{
+			var result = new DbColumn[columns.Length - 1];
+
+			var index = 0;
+			foreach (var column in columns)
+			{
+				if (!column.IsPrimaryKey)
+				{
+					result[index++] = column;
+				}
+			}
+
+			return result;
 		}
 
 		private static void AppendParameters(StringBuilder buffer, DbColumn[] columns, DbQueryParameter[] parameters)
@@ -284,5 +317,7 @@ namespace AppBuilder.Db
 
 			return names;
 		}
+
+		
 	}
 }

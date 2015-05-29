@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SQLite;
 using System.IO;
 using System.Text;
 using AppBuilder;
@@ -11,6 +12,28 @@ namespace Demo
 	{
 		static void Main(string[] args)
 		{
+			//using (var cn = new SQLiteConnection(@"Data Source=C:\Users\bg900343\Desktop\store.sqlite"))
+			//{
+			//	cn.Open();
+			//	QueryHelper.Connection = cn;
+			//	QueryHelper.ParameterCreator = (name, v) => new SQLiteParameter(name, v);
+
+			//	var bds = QueryHelper.Get(@"select id, name from brands", r => r.GetInt64(0) + " : " + r.GetString(1));
+			//	foreach (var bd in bds)
+			//	{
+			//		Console.WriteLine(bd);
+			//	}
+
+				
+
+			//	QueryHelper.ExecuteQuery(@"insert into brands(name) values('A')");
+			//	var value = QueryHelper.ExecuteScalar(@"SELECT LAST_INSERT_ROWID()");
+			//	Console.WriteLine(value);
+
+			//}
+			//return;
+
+
 			var articleTypes = DbTable.ReadOnly(@"ArticleTypes", new[]
 			                                                     {
 				                                                     DbColumn.PrimaryKey(),

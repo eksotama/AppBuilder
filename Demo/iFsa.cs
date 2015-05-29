@@ -169,7 +169,7 @@ namespace Demo
 
 	public sealed class Activity
 	{
-		public long Id { get; private set; }
+		public long Id { get; set; }
 		public ActivityType ActivityType { get; private set; }
 		public Visit Visit { get; private set; }
 		public DateTime ValidFrom { get; private set; }
@@ -213,46 +213,9 @@ namespace Demo
 
 
 
-	public sealed class ActivitiesAdapter
-	{
-		private readonly Dictionary<long, ActivityType> _activityTypes;
+	
 
-		public ActivitiesAdapter(Dictionary<long, ActivityType> activityTypes)
-		{
-			if (activityTypes == null) throw new ArgumentNullException("activityTypes");
 
-			_activityTypes = activityTypes;
-		}
-
-		public Activity Creator(IDataReader r, Visit visit)
-		{
-			if (r == null) throw new ArgumentNullException("r");
-			if (visit == null) throw new ArgumentNullException("visit");
-
-			var id = 0L;
-			if (!r.IsDBNull(0))
-			{
-				id = r.GetInt64(0);
-			}
-			var activityType = default(ActivityType);
-			if (!r.IsDBNull(1))
-			{
-				activityType = _activityTypes[r.GetInt64(1)];
-			}
-			var validFrom = DateTime.MinValue;
-			if (!r.IsDBNull(2))
-			{
-				validFrom = r.GetDateTime(2);
-			}
-			var validTo = DateTime.MinValue;
-			if (!r.IsDBNull(3))
-			{
-				validTo = r.GetDateTime(3);
-			}
-
-			return new Activity(id, activityType, visit, validFrom, validTo);
-		}
-	}
 
 
 

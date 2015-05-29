@@ -122,6 +122,11 @@ namespace AppBuilder
 			_buffer.AppendLine(@"}");
 		}
 
+		public void EndBlockWith()
+		{
+			_buffer.AppendLine(@"};");
+		}
+
 		public void AddDictionaryFields(Field[] fields)
 		{
 			if (fields == null) throw new ArgumentNullException("fields");
@@ -204,7 +209,7 @@ namespace AppBuilder
 					lines[i] = oldIndentation + value;
 					continue;
 				}
-				if (value == @"}")
+				if (value == @"}" || value == @"};")
 				{
 					tabs--;
 					indentation = new string('\t', tabs);
@@ -346,6 +351,60 @@ namespace AppBuilder
 
 			return null;
 		}
+
+		public void AddInsert(ClrClass @class, DbTable table)
+		{
+			if (@class == null) throw new ArgumentNullException("class");
+			if (table == null) throw new ArgumentNullException("table");
+
+			var varName = NameProvider.ToParameterName(@class.Name);
+			_buffer.AppendLine(string.Format(@"public void Insert({0} {1})", @class.Name, varName));
+
+			this.BeginBlock();
+
+			_buffer.AppendLine(this.GetParameterCheck(varName));
+			this.AddEmptyLine();
+
+			_buffer.AppendLine(string.Format(@"var query = @""{0}"";", QueryCreator.GetInsert(table).Statement));
+			this.AddEmptyLine();
+			_buffer.AppendLine(@"var sqlParams = new []");
+
+			this.BeginBlock();
+			var index = 0;
+			var names = QueryCreator.GetInsertParameterNames(table);
+			foreach (var property in @class.Properties)
+			{
+				var name = property.Name;
+				if (name != NameProvider.IdName)
+				{
+					var type = property.Type;
+					if (!type.IsBuiltIn)
+					{
+						name += @"." + NameProvider.IdName;
+					}
+					_buffer.AppendLine(string.Format(@"QueryHelper.Parameter(@""{0}"", {1}.{2}),", names[index++], varName, name));
+				}
+			}
+			this.EndBlockWith();
+
+			this.AddEmptyLine();
+
+			_buffer.AppendLine(@"QueryHelper.ExecuteQuery(query, sqlParams);");
+			_buffer.AppendLine(string.Format(@"{0}.Id = Convert.ToInt64(QueryHelper.ExecuteScalar(@""SELECT LAST_INSERT_ROWID()""));", varName));
+
+			this.EndBlock();
+			//public void Insert(Activity activity)
+			//{
+			//	var query = @"insert into va...";
+
+			//	var sqlParams = new []
+			//	{
+			//		QueryHelper.Create(@"", activity.Id),
+			//	};
+
+			//	QueryHelper.Execute(query, sqlParams);
+			//}
+		}
 	}
 
 	public static class AdapterGenerator
@@ -394,7 +453,6 @@ namespace AppBuilder
 				generator.AddEmptyLine();
 			}
 
-			var addGetMethod = true;
 			foreach (var property in @class.Properties)
 			{
 				var type = property.Type;
@@ -413,21 +471,21 @@ namespace AppBuilder
 					}
 					if (!found)
 					{
-						addGetMethod = false;
+						// Add Get method
+						generator.AddGetMethod(@class.Name, table);
+						generator.AddEmptyLine();
 						break;
 					}
 				}
 			}
 
-			if (addGetMethod)
-			{
-				// Add Get method
-				generator.AddGetMethod(@class.Name, table);
-				generator.AddEmptyLine();
-			}
-
 			// Add Creator
 			generator.AddCreator(@class, fields);
+			generator.AddEmptyLine();
+
+			// Add Insert
+			generator.AddInsert(@class, table);
+			generator.AddEmptyLine();
 
 			generator.EndBlock();
 
