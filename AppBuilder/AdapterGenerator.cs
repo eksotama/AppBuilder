@@ -24,7 +24,7 @@ namespace AppBuilder
 
 	public static class Stable
 	{
-		public static DbTable FindByName(DbSchema schema, DbForeignKey foreignKey)
+		public static DbTable FindTableByForeignKey(DbSchema schema, DbForeignKey foreignKey)
 		{
 			if (schema == null) throw new ArgumentNullException("schema");
 			if (foreignKey == null) throw new ArgumentNullException("foreignKey");
@@ -42,14 +42,16 @@ namespace AppBuilder
 			return null;
 		}
 
-		public static AdapterField FindByType(AdapterField[] fields, string type)
+		public static AdapterField FindFieldByType(AdapterField[] fields, ClrType type)
 		{
 			if (fields == null) throw new ArgumentNullException("fields");
 			if (type == null) throw new ArgumentNullException("type");
 
+			var typeName = type.Name;
+
 			foreach (var field in fields)
 			{
-				if (field.Type == type)
+				if (field.Type == typeName)
 				{
 					return field;
 				}
@@ -62,18 +64,18 @@ namespace AppBuilder
 		{
 			if (columns == null) throw new ArgumentNullException("columns");
 
-			var total = 0;
+			var count = 0;
 
 			foreach (var column in columns)
 			{
 				var foreignKey = column.DbForeignKey;
 				if (foreignKey != null)
 				{
-					total++;
+					count++;
 				}
 			}
 
-			return total;
+			return count;
 		}
 
 		public static DbTable[] GetForeignKeyTables(DbTable table, DbSchema schema)
@@ -89,7 +91,32 @@ namespace AppBuilder
 				var foreignKey = column.DbForeignKey;
 				if (foreignKey != null)
 				{
-					foreignKeyTables[index++] = FindByName(schema, foreignKey);
+					foreignKeyTables[index++] = FindTableByForeignKey(schema, foreignKey);
+				}
+			}
+
+			return RemoveCollectionTypeForeignKeys(foreignKeyTables, schema);
+		}
+
+		private static DbTable[] RemoveCollectionTypeForeignKeys(DbTable[] foreignKeyTables, DbSchema schema)
+		{
+			foreach (var table in foreignKeyTables)
+			{
+				var collectionType = GetCollectionType(DbTableConverter.ToClrClass(table, schema.Tables).Properties);
+				if (collectionType != null)
+				{
+					var tables = new DbTable[foreignKeyTables.Length - 1];
+
+					var index = 0;
+					foreach (var current in foreignKeyTables)
+					{
+						if (current != table)
+						{
+							tables[index++] = current;
+						}
+					}
+
+					return tables;
 				}
 			}
 
@@ -112,14 +139,14 @@ namespace AppBuilder
 			return null;
 		}
 
-		public static string GetSelectorMethod(string className)
+		public static string GetSelector(string className)
 		{
 			if (className == null) throw new ArgumentNullException("className");
 
 			return string.Format(@"private long Selector({0} {1}) {{ return {1}.Id; }}", className, char.ToLowerInvariant(className[0]));
 		}
 
-		public static string GetFillMethod(string className, DbTable table)
+		public static string GetFill(string className, DbTable table)
 		{
 			if (className == null) throw new ArgumentNullException("className");
 			if (table == null) throw new ArgumentNullException("table");
@@ -138,7 +165,7 @@ namespace AppBuilder
 				QueryCreator.GetSelect(table).Statement);
 		}
 
-		public static string GetGetMethod(string className, DbTable table)
+		public static string GetGetAll(string className, DbTable table)
 		{
 			if (className == null) throw new ArgumentNullException("className");
 			if (table == null) throw new ArgumentNullException("table");
@@ -161,9 +188,9 @@ namespace AppBuilder
 			if (foreignKeyTables == null) throw new ArgumentNullException("foreignKeyTables");
 
 			var fields = GetDictionaryFields(foreignKeyTables);
-			var fill = GetFillMethod(@class.Name, table);
-			var creator = GetCreatorMethod(@class, fields);
-			var selector = GetSelectorMethod(@class.Name);
+			var fill = GetFill(@class.Name, table);
+			var creator = GetCreatorForReadOnlyTable(@class, fields);
+			var selector = GetSelector(@class.Name);
 
 			if (foreignKeyTables.Length > 0)
 			{
@@ -211,8 +238,8 @@ namespace AppBuilder
 			if (foreignKeyTables == null) throw new ArgumentNullException("foreignKeyTables");
 
 			var fields = GetDictionaryFields(foreignKeyTables);
-			var fill = GetGetMethod(@class.Name, table);
-			var creator = GetCreatorMethod(@class, fields);
+			var fill = GetGetAll(@class.Name, table);
+			var creator = GetCreatorForNormalTable(@class, fields);
 
 			if (foreignKeyTables.Length > 0)
 			{
@@ -251,6 +278,7 @@ namespace AppBuilder
 		{
 			throw new NotImplementedException();
 		}
+
 
 		public static string GetConstructor(DbTable table, AdapterField[] fields)
 		{
@@ -314,9 +342,22 @@ namespace AppBuilder
 			return fields;
 		}
 
-		public static string GetCreatorMethod(ClrClass @class, AdapterField[] fields)
+		public static string[] GetParameterNames(ClrProperty[] properties)
+		{
+			var names = new string[properties.Length];
+
+			for (var i = 0; i < properties.Length; i++)
+			{
+				names[i] = NameProvider.ToParameterName(properties[i].Name);
+			}
+
+			return names;
+		}
+
+		public static string GetCreatorForReadOnlyTable(ClrClass @class, AdapterField[] fields)
 		{
 			if (@class == null) throw new ArgumentNullException("class");
+			if (fields == null) throw new ArgumentNullException("fields");
 
 			var template = @"private {0} {0}Creator(IDataReader r)
 	{{
@@ -325,33 +366,102 @@ namespace AppBuilder
 		return new {0}({2});
 	}}";
 			var properties = @class.Properties;
-			var names = new string[properties.Length];
-			var readValues = new string[properties.Length];
 
-			for (var index = 0; index < properties.Length; index++)
+			var names = GetParameterNames(properties);
+			var values = new string[properties.Length];
+
+			for (var i = 0; i < properties.Length; i++)
 			{
-				var property = properties[index];
-				var name = NameProvider.ToParameterName(property.Name);
+				var property = properties[i];
 
-				string readValue;
-
+				string value;
 				var type = property.Type;
 				if (type.IsBuiltIn)
 				{
-					readValue = GetReadValue(name, type, index);
+					value = GetReadValue(names[i], property.Type, i);
 				}
 				else
 				{
-					readValue = GetReadValue(name, type, index, FindByType(fields, type.Name).Name);
+					value = GetReadValueWithMapping(names[i], property.Type, i, FindFieldByType(fields, property.Type));
 				}
 
-				names[index] = name;
-				readValues[index] = readValue.TrimStart();
+				values[i] = value;
 			}
 
 			return string.Format(template, @class.Name,
-				string.Join(Environment.NewLine + "\t\t", readValues),
+				string.Join(Environment.NewLine + "\t\t", values),
 				string.Join(@", ", names));
+		}
+
+		public static string GetCreatorForNormalTable(ClrClass @class, AdapterField[] fields)
+		{
+			if (@class == null) throw new ArgumentNullException("class");
+			if (fields == null) throw new ArgumentNullException("fields");
+
+			var template = @"private {0} {0}Creator(IDataReader r{3})
+	{{
+		{1}
+	
+		return new {0}({2});
+	}}";
+			var properties = @class.Properties;
+
+			var valueIndex = 0;
+			var names = GetParameterNames(properties);
+			var values = new string[properties.Length];
+
+			for (var i = 0; i < properties.Length; i++)
+			{
+				var property = properties[i];
+
+				var value = string.Empty;
+				var type = property.Type;
+				if (type.IsBuiltIn)
+				{
+					value = GetReadValue(names[i], property.Type, valueIndex++);
+				}
+				else
+				{
+					var field = FindFieldByType(fields, property.Type);
+					if (field != null)
+					{
+						value = GetReadValueWithMapping(names[i], property.Type, valueIndex++, field);
+					}
+				}
+				values[i] = value;
+			}
+
+			values = GetValuesWithoutEmpties(values);
+
+			return string.Format(template, @class.Name,
+				string.Join(Environment.NewLine + "\t\t", values),
+				string.Join(@", ", names));
+		}
+
+		public static string[] GetValuesWithoutEmpties(string[] values)
+		{
+			if (values == null) throw new ArgumentNullException("values");
+
+			foreach (var value in values)
+			{
+				if (value == string.Empty)
+				{
+					var withoutEmpties = new string[values.Length - 1];
+
+					var index = 0;
+					foreach (var innerValue in values)
+					{
+						if (innerValue != string.Empty)
+						{
+							withoutEmpties[index++] = innerValue;
+						}
+					}
+
+					return withoutEmpties;
+				}
+			}
+
+			return values;
 		}
 
 		public static string GetReadValue(string varName, ClrType type, int index)
@@ -367,18 +477,18 @@ namespace AppBuilder
 		}}", varName, type.DefaultValue, index, type.ReaderMethod);
 		}
 
-		public static string GetReadValue(string varName, ClrType type, int index, string dictionary)
+		public static string GetReadValueWithMapping(string varName, ClrType type, int index, AdapterField field)
 		{
 			if (varName == null) throw new ArgumentNullException("varName");
 			if (type == null) throw new ArgumentNullException("type");
-			if (dictionary == null) throw new ArgumentNullException("dictionary");
+			if (field == null) throw new ArgumentNullException("field");
 
 			return string.Format(@"
 		var {0} = {1};
 		if (!r.IsDBNull({2}))
 		{{
 			{0} = _{4}[r.{3}({2})];
-		}}", varName, type.DefaultValue, index, type.ReaderMethod, dictionary);
+		}}", varName, type.DefaultValue, index, type.ReaderMethod, field.Name);
 		}
 	}
 
