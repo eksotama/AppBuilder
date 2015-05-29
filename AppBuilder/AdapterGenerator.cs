@@ -7,12 +7,12 @@ using AppBuilder.Db.DDL;
 
 namespace AppBuilder
 {
-	public sealed class AdapterField
+	public sealed class Field
 	{
 		public string Type { get; private set; }
 		public string Name { get; private set; }
 
-		public AdapterField(string type, string name)
+		public Field(string type, string name)
 		{
 			if (type == null) throw new ArgumentNullException("type");
 			if (name == null) throw new ArgumentNullException("name");
@@ -22,13 +22,53 @@ namespace AppBuilder
 		}
 	}
 
-	public static class Stable
+	public static class ClrTypeHelper
 	{
-		public static DbTable FindTableByForeignKey(DbSchema schema, DbForeignKey foreignKey)
+		public static ClrType GetCollectionType(IEnumerable<ClrProperty> properties)
 		{
-			if (schema == null) throw new ArgumentNullException("schema");
-			if (foreignKey == null) throw new ArgumentNullException("foreignKey");
+			if (properties == null) throw new ArgumentNullException("properties");
 
+			foreach (var property in properties)
+			{
+				var type = property.Type;
+				if (type.IsCollection)
+				{
+					return type;
+				}
+			}
+
+			return null;
+		}
+	}
+
+	public static class ForeignKeyHelper
+	{
+		public static DbTable[] GetForeignKeyTables(IEnumerable<DbColumn> columns, DbSchema schema)
+		{
+			if (columns == null) throw new ArgumentNullException("columns");
+			if (schema == null) throw new ArgumentNullException("schema");
+
+			var foreignKeyTables = new List<DbTable>();
+
+			foreach (var column in columns)
+			{
+				var foreignKey = column.DbForeignKey;
+				if (foreignKey != null)
+				{
+					var foreignKeyTable = FindTableByForeignKey(schema, foreignKey);
+					var collectionType = ClrTypeHelper.GetCollectionType(DbTableConverter.ToClrClass(foreignKeyTable, schema.Tables).Properties);
+					if (collectionType == null)
+					{
+						foreignKeyTables.Add(foreignKeyTable);
+					}
+				}
+			}
+
+			return foreignKeyTables.ToArray();
+		}
+
+		private static DbTable FindTableByForeignKey(DbSchema schema, DbForeignKey foreignKey)
+		{
 			var foreignKeyTableName = foreignKey.Table;
 
 			foreach (var table in schema.Tables)
@@ -41,8 +81,255 @@ namespace AppBuilder
 
 			return null;
 		}
+	}
 
-		public static AdapterField FindFieldByType(AdapterField[] fields, ClrType type)
+	public static class FieldHelper
+	{
+		public static Field[] GetDictionaryFields(DbTable[] tables)
+		{
+			if (tables == null) throw new ArgumentNullException("tables");
+
+			var fields = new Field[tables.Length];
+
+			for (var index = 0; index < tables.Length; index++)
+			{
+				var table = tables[index];
+				fields[index] = new Field(table.ClassName, NameProvider.ToParameterName(table.Name));
+			}
+
+			return fields;
+		}
+	}
+
+	public sealed class CodeGenerator
+	{
+		private readonly StringBuilder _buffer = new StringBuilder(1024);
+
+		public void AddClassDefinition(string className)
+		{
+			if (className == null) throw new ArgumentNullException("className");
+
+			_buffer.AppendLine(string.Format(@"public sealed class {0}", className));
+		}
+
+		public void BeginBlock()
+		{
+			_buffer.AppendLine(@"{");
+		}
+
+		public void EndBlock()
+		{
+			_buffer.AppendLine(@"}");
+		}
+
+		public void AddDictionaryFields(Field[] fields)
+		{
+			if (fields == null) throw new ArgumentNullException("fields");
+
+			foreach (var field in fields)
+			{
+				_buffer.AppendLine(string.Format("private readonly {0} _{1};", GetDictionaryField(field), field.Name));
+			}
+		}
+
+		public void AddContructor(Field[] fields, string className)
+		{
+			if (className == null) throw new ArgumentNullException("className");
+			if (fields == null) throw new ArgumentNullException("fields");
+
+			var parameters = new string[fields.Length];
+			var parameterChecks = new string[fields.Length];
+			var assignemts = new string[fields.Length];
+
+			for (var i = 0; i < fields.Length; i++)
+			{
+				var field = fields[i];
+				var name = field.Name;
+				parameters[i] = string.Format(@"{0} {1}", GetDictionaryField(field), name);
+				parameterChecks[i] = GetParameterCheck(name);
+				assignemts[i] = @"_" + name + @" = " + name + @";";
+			}
+
+			_buffer.AppendLine(string.Format(@"public {0}({1})", className, string.Join(@", ", parameters)));
+
+			this.BeginBlock();
+
+			// Append checks
+			foreach (var check in parameterChecks)
+			{
+				_buffer.AppendLine(check);
+			}
+
+			this.AddEmptyLine();
+
+			// Append field assignments
+			foreach (var assignment in assignemts)
+			{
+				_buffer.AppendLine(assignment);
+			}
+
+			this.EndBlock();
+		}
+
+		private string GetDictionaryField(Field field)
+		{
+			return GetDictionaryField(field.Type);
+		}
+
+		private string GetDictionaryField(string type)
+		{
+			return string.Format(@"Dictionary<long, {0}>", type);
+		}
+
+		private string GetParameterCheck(string name)
+		{
+			return string.Format(@"if ({0} == null) throw new ArgumentNullException(""{0}"");", name);
+		}
+
+		public string GetFormattedOutput()
+		{
+			var lines = _buffer.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+
+			var tabs = 0;
+			var indentation = string.Empty;
+
+			for (var i = 0; i < lines.Length; i++)
+			{
+				var value = lines[i];
+				if (value == @"{")
+				{
+					var oldIndentation = indentation;
+					tabs++;
+					indentation = new string('\t', tabs);
+					lines[i] = oldIndentation + value;
+					continue;
+				}
+				if (value == @"}")
+				{
+					tabs--;
+					indentation = new string('\t', tabs);
+				}
+				lines[i] = indentation + value;
+			}
+
+			return string.Join(Environment.NewLine, lines);
+		}
+
+		public void AddEmptyLine()
+		{
+			_buffer.AppendLine();
+		}
+
+		public void AddSelector(string className)
+		{
+			_buffer.AppendLine(string.Format(@"private long Selector({0} {1}) {{ return {1}.Id; }}", className, char.ToLowerInvariant(className[0])));
+		}
+
+		public void AddFillMethod(string className, DbTable table)
+		{
+			var name = NameProvider.ToParameterName(table.Name);
+
+			_buffer.AppendLine(string.Format(@"public void Fill({0} {1})", GetDictionaryField(className), name));
+
+			this.BeginBlock();
+
+			_buffer.AppendLine(this.GetParameterCheck(name));
+			this.AddEmptyLine();
+			_buffer.AppendLine(string.Format(@"var query = @""{0}"";", QueryCreator.GetSelect(table).Statement));
+			this.AddEmptyLine();
+			_buffer.AppendLine(string.Format(@"QueryHelper.Fill({0}, query, this.Creator, this.Selector);", name));
+
+			this.EndBlock();
+		}
+
+		public void AddGetMethod(string className, DbTable table)
+		{
+			_buffer.AppendLine(string.Format(@"public List<{0}> GetAll()", className));
+
+			this.BeginBlock();
+
+			_buffer.AppendLine(string.Format(@"var query = @""{0}"";", QueryCreator.GetSelect(table).Statement));
+			this.AddEmptyLine();
+			_buffer.AppendLine(@"return QueryHelper.Get(query, this.Creator);");
+
+			this.EndBlock();
+		}
+
+		public void AddCreator(ClrClass @class, Field[] fields)
+		{
+			var properties = @class.Properties;
+
+			var index = 0;
+			var names = new string[properties.Length];
+			foreach (var property in properties)
+			{
+				names[index++] = NameProvider.ToParameterName(property.Name);
+			}
+
+			Field parameter = null;
+			for (var i = 0; i < properties.Length; i++)
+			{
+				var property = properties[i];
+				var name = names[i];
+				var type = property.Type;
+				var readValue = type.IsBuiltIn || (FindFieldByType(fields, property.Type)) != null;
+				if (!readValue)
+				{
+					parameter = new Field(type.Name, name);
+				}
+			}
+
+			_buffer.AppendLine(parameter == null
+				? string.Format(@"private {0} Creator(IDataReader r)", @class.Name)
+				: string.Format(@"public {0} Creator(IDataReader r, {1} {2})", @class.Name, parameter.Type, parameter.Name));
+
+			this.BeginBlock();
+
+			if (parameter != null)
+			{
+				_buffer.AppendLine(this.GetParameterCheck(@"r"));
+				_buffer.AppendLine(this.GetParameterCheck(parameter.Name));
+				this.AddEmptyLine();
+			}
+
+			var readerIndex = 0;
+			for (var i = 0; i < properties.Length; i++)
+			{
+				var property = properties[i];
+				var name = names[i];
+				var type = property.Type;
+
+				Field field = null;
+				var readValue = type.IsBuiltIn || (field = FindFieldByType(fields, property.Type)) != null;
+				if (readValue)
+				{
+					_buffer.AppendLine(string.Format(@"var {0} = {1};", name, type.DefaultValue));
+					_buffer.AppendLine(string.Format(@"if (!r.IsDBNull({0}))", readerIndex));
+
+					this.BeginBlock();
+
+					if (type.IsBuiltIn)
+					{
+						_buffer.AppendLine(string.Format(@"{0} = r.{1}({2});", name, type.ReaderMethod, readerIndex));
+					}
+					else
+					{
+						_buffer.AppendLine(string.Format(@"{0} = _{1}[r.{2}({3})];", name, field.Name, type.ReaderMethod, readerIndex));
+					}
+
+					this.EndBlock();
+					readerIndex++;
+				}
+			}
+
+			this.AddEmptyLine();
+
+			_buffer.AppendLine(string.Format(@"return new {0}({1});", @class.Name, string.Join(@", ", names)));
+
+			this.EndBlock();
+		}
+
+		private static Field FindFieldByType(IEnumerable<Field> fields, ClrType type)
 		{
 			if (fields == null) throw new ArgumentNullException("fields");
 			if (type == null) throw new ArgumentNullException("type");
@@ -59,437 +346,6 @@ namespace AppBuilder
 
 			return null;
 		}
-
-		public static int GetForeignKeysCount(IEnumerable<DbColumn> columns)
-		{
-			if (columns == null) throw new ArgumentNullException("columns");
-
-			var count = 0;
-
-			foreach (var column in columns)
-			{
-				var foreignKey = column.DbForeignKey;
-				if (foreignKey != null)
-				{
-					count++;
-				}
-			}
-
-			return count;
-		}
-
-		public static DbTable[] GetForeignKeyTables(DbTable table, DbSchema schema)
-		{
-			if (table == null) throw new ArgumentNullException("table");
-			if (schema == null) throw new ArgumentNullException("schema");
-
-			var foreignKeyTables = new DbTable[GetForeignKeysCount(table.Columns)];
-
-			var index = 0;
-			foreach (var column in table.Columns)
-			{
-				var foreignKey = column.DbForeignKey;
-				if (foreignKey != null)
-				{
-					foreignKeyTables[index++] = FindTableByForeignKey(schema, foreignKey);
-				}
-			}
-
-			return RemoveCollectionTypeForeignKeys(foreignKeyTables, schema);
-		}
-
-		private static DbTable[] RemoveCollectionTypeForeignKeys(DbTable[] foreignKeyTables, DbSchema schema)
-		{
-			foreach (var table in foreignKeyTables)
-			{
-				var collectionType = GetCollectionType(DbTableConverter.ToClrClass(table, schema.Tables).Properties);
-				if (collectionType != null)
-				{
-					var tables = new DbTable[foreignKeyTables.Length - 1];
-
-					var index = 0;
-					foreach (var current in foreignKeyTables)
-					{
-						if (current != table)
-						{
-							tables[index++] = current;
-						}
-					}
-
-					return tables;
-				}
-			}
-
-			return foreignKeyTables;
-		}
-
-		public static ClrType GetCollectionType(IEnumerable<ClrProperty> properties)
-		{
-			if (properties == null) throw new ArgumentNullException("properties");
-
-			foreach (var property in properties)
-			{
-				var type = property.Type;
-				if (type.IsCollection)
-				{
-					return type;
-				}
-			}
-
-			return null;
-		}
-
-		public static string GetSelector(string className)
-		{
-			if (className == null) throw new ArgumentNullException("className");
-
-			return string.Format(@"private long Selector({0} {1}) {{ return {1}.Id; }}", className, char.ToLowerInvariant(className[0]));
-		}
-
-		public static string GetFill(string className, DbTable table)
-		{
-			if (className == null) throw new ArgumentNullException("className");
-			if (table == null) throw new ArgumentNullException("table");
-
-			var template = @"public void Fill(Dictionary<long, {0}> {1})
-	{{
-		if ({1} == null) throw new ArgumentNullException(""{1}"");
-
-		var query = @""{2}"";
-
-		QueryHelper.Fill({1}, query, this.{0}Creator, this.Selector);
-	}}";
-			return string.Format(template,
-				className,
-				NameProvider.ToParameterName(table.Name),
-				QueryCreator.GetSelect(table).Statement);
-		}
-
-		public static string GetGetAll(string className, DbTable table)
-		{
-			if (className == null) throw new ArgumentNullException("className");
-			if (table == null) throw new ArgumentNullException("table");
-
-			var template = @"public List<{0}> GetAll()
-	{{
-		var query = @""{1}"";
-
-		return QueryHelper.Get(query, this.{0}Creator);
-	}}";
-			return string.Format(template,
-				className,
-				QueryCreator.GetSelect(table).Statement);
-		}
-
-		public static string GetAdapterReadonOnly(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
-		{
-			if (@class == null) throw new ArgumentNullException("class");
-			if (table == null) throw new ArgumentNullException("table");
-			if (foreignKeyTables == null) throw new ArgumentNullException("foreignKeyTables");
-
-			var fields = GetDictionaryFields(foreignKeyTables);
-			var fill = GetFill(@class.Name, table);
-			var creator = GetCreatorForReadOnlyTable(@class, fields);
-			var selector = GetSelector(@class.Name);
-
-			if (foreignKeyTables.Length > 0)
-			{
-				var template = @"public sealed class {0}Adapter
-{{
-	{4}
-
-	{5}
-
-	{1}
-
-	{2}
-
-	{3}
-}}";
-
-
-				var fieldDefinitions = GetFieldDefinitions(fields);
-				var constructor = GetConstructor(table, fields);
-
-				return string.Format(template, table.Name, fill, creator, selector, fieldDefinitions, constructor);
-			}
-			else
-			{
-				var template = @"public sealed class {0}Adapter
-{{
-	{1}
-
-	{2}
-
-	{3}
-}}";
-				return string.Format(template, table.Name, fill, creator, selector);
-			}
-		}
-
-		public static string GetAdapter(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
-		{
-			if (@class == null) throw new ArgumentNullException("class");
-			if (table == null) throw new ArgumentNullException("table");
-			if (foreignKeyTables == null) throw new ArgumentNullException("foreignKeyTables");
-
-			if (@class == null) throw new ArgumentNullException("class");
-			if (table == null) throw new ArgumentNullException("table");
-			if (foreignKeyTables == null) throw new ArgumentNullException("foreignKeyTables");
-
-			var fields = GetDictionaryFields(foreignKeyTables);
-			var fill = GetGetAll(@class.Name, table);
-			var creator = GetCreatorForNormalTable(@class, fields);
-
-			if (foreignKeyTables.Length > 0)
-			{
-				var template = @"public sealed class {0}Adapter
-{{
-	{3}
-
-	{4}
-
-	{1}
-
-	{2}
-}}";
-
-
-				var fieldDefinitions = GetFieldDefinitions(fields);
-				var constructor = GetConstructor(table, fields);
-
-				return string.Format(template, table.Name, fill, creator, fieldDefinitions, constructor);
-			}
-			else
-			{
-				var template = @"public sealed class {0}Adapter
-{{
-	{1}
-
-	{2}
-
-	{3}
-}}";
-				return string.Format(template, table.Name, fill, creator, "TODO:!!!");
-			}
-		}
-
-		public static string GetAdapterWithCollection(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
-		{
-			throw new NotImplementedException();
-		}
-
-
-		public static string GetConstructor(DbTable table, AdapterField[] fields)
-		{
-			if (table == null) throw new ArgumentNullException("table");
-			if (fields == null) throw new ArgumentNullException("fields");
-
-			var template = @"public {0}Adapter({1})
-	{{
-		{2}
-
-		{3}
-	}}";
-			var parameterValues = new string[fields.Length];
-			var checkValues = new string[fields.Length];
-			var assignementValues = new string[fields.Length];
-
-			for (var i = 0; i < fields.Length; i++)
-			{
-				var field = fields[i];
-				var type = field.Type;
-				var name = field.Name;
-				parameterValues[i] = string.Format(@"Dictionary<long, {0}> ", type) + name;
-				checkValues[i] = string.Format(@"if ({0} == null) throw new ArgumentNullException(""{0}"");", name);
-				assignementValues[i] = @"_" + name + @" = " + name + @";";
-			}
-
-			var parameters = string.Join(@", ", parameterValues);
-			var checks = string.Join(Environment.NewLine + "\t\t", checkValues);
-			var assignments = string.Join(Environment.NewLine + "\t\t", assignementValues);
-
-			return string.Format(template, table.Name, parameters, checks, assignments);
-		}
-
-		public static string GetFieldDefinitions(AdapterField[] fields)
-		{
-			if (fields == null) throw new ArgumentNullException("fields");
-
-			var values = new string[fields.Length];
-
-			for (var i = 0; i < fields.Length; i++)
-			{
-				var field = fields[i];
-				values[i] = string.Format("private readonly Dictionary<long, {0}> _{1};", field.Type, field.Name);
-			}
-
-			return string.Join(Environment.NewLine + "\t", values);
-		}
-
-		public static AdapterField[] GetDictionaryFields(DbTable[] tables)
-		{
-			if (tables == null) throw new ArgumentNullException("tables");
-
-			var fields = new AdapterField[tables.Length];
-
-			for (var index = 0; index < tables.Length; index++)
-			{
-				var table = tables[index];
-				fields[index] = new AdapterField(table.ClassName, NameProvider.ToParameterName(table.Name));
-			}
-
-			return fields;
-		}
-
-		public static string[] GetParameterNames(ClrProperty[] properties)
-		{
-			var names = new string[properties.Length];
-
-			for (var i = 0; i < properties.Length; i++)
-			{
-				names[i] = NameProvider.ToParameterName(properties[i].Name);
-			}
-
-			return names;
-		}
-
-		public static string GetCreatorForReadOnlyTable(ClrClass @class, AdapterField[] fields)
-		{
-			if (@class == null) throw new ArgumentNullException("class");
-			if (fields == null) throw new ArgumentNullException("fields");
-
-			var template = @"private {0} {0}Creator(IDataReader r)
-	{{
-		{1}
-	
-		return new {0}({2});
-	}}";
-			var properties = @class.Properties;
-
-			var names = GetParameterNames(properties);
-			var values = new string[properties.Length];
-
-			for (var i = 0; i < properties.Length; i++)
-			{
-				var property = properties[i];
-
-				string value;
-				var type = property.Type;
-				if (type.IsBuiltIn)
-				{
-					value = GetReadValue(names[i], property.Type, i);
-				}
-				else
-				{
-					value = GetReadValueWithMapping(names[i], property.Type, i, FindFieldByType(fields, property.Type));
-				}
-
-				values[i] = value;
-			}
-
-			return string.Format(template, @class.Name,
-				string.Join(Environment.NewLine + "\t\t", values),
-				string.Join(@", ", names));
-		}
-
-		public static string GetCreatorForNormalTable(ClrClass @class, AdapterField[] fields)
-		{
-			if (@class == null) throw new ArgumentNullException("class");
-			if (fields == null) throw new ArgumentNullException("fields");
-
-			var template = @"private {0} {0}Creator(IDataReader r{3})
-	{{
-		{1}
-	
-		return new {0}({2});
-	}}";
-			var properties = @class.Properties;
-
-			var valueIndex = 0;
-			var names = GetParameterNames(properties);
-			var values = new string[properties.Length];
-
-			for (var i = 0; i < properties.Length; i++)
-			{
-				var property = properties[i];
-
-				var value = string.Empty;
-				var type = property.Type;
-				if (type.IsBuiltIn)
-				{
-					value = GetReadValue(names[i], property.Type, valueIndex++);
-				}
-				else
-				{
-					var field = FindFieldByType(fields, property.Type);
-					if (field != null)
-					{
-						value = GetReadValueWithMapping(names[i], property.Type, valueIndex++, field);
-					}
-				}
-				values[i] = value;
-			}
-
-			values = GetValuesWithoutEmpties(values);
-
-			return string.Format(template, @class.Name,
-				string.Join(Environment.NewLine + "\t\t", values),
-				string.Join(@", ", names));
-		}
-
-		public static string[] GetValuesWithoutEmpties(string[] values)
-		{
-			if (values == null) throw new ArgumentNullException("values");
-
-			foreach (var value in values)
-			{
-				if (value == string.Empty)
-				{
-					var withoutEmpties = new string[values.Length - 1];
-
-					var index = 0;
-					foreach (var innerValue in values)
-					{
-						if (innerValue != string.Empty)
-						{
-							withoutEmpties[index++] = innerValue;
-						}
-					}
-
-					return withoutEmpties;
-				}
-			}
-
-			return values;
-		}
-
-		public static string GetReadValue(string varName, ClrType type, int index)
-		{
-			if (varName == null) throw new ArgumentNullException("varName");
-			if (type == null) throw new ArgumentNullException("type");
-
-			return string.Format(@"
-		var {0} = {1};
-		if (!r.IsDBNull({2}))
-		{{
-			{0} = r.{3}({2});
-		}}", varName, type.DefaultValue, index, type.ReaderMethod);
-		}
-
-		public static string GetReadValueWithMapping(string varName, ClrType type, int index, AdapterField field)
-		{
-			if (varName == null) throw new ArgumentNullException("varName");
-			if (type == null) throw new ArgumentNullException("type");
-			if (field == null) throw new ArgumentNullException("field");
-
-			return string.Format(@"
-		var {0} = {1};
-		if (!r.IsDBNull({2}))
-		{{
-			{0} = _{4}[r.{3}({2})];
-		}}", varName, type.DefaultValue, index, type.ReaderMethod, field.Name);
-		}
 	}
 
 	public static class AdapterGenerator
@@ -505,19 +361,126 @@ namespace AppBuilder
 			if (table == null) throw new ArgumentNullException("table");
 			if (schema == null) throw new ArgumentNullException("schema");
 
-			var foreignKeyTables = Stable.GetForeignKeyTables(table, schema);
-			var collectionType = Stable.GetCollectionType(@class.Properties);
-
+			var foreignKeyTables = ForeignKeyHelper.GetForeignKeyTables(table.Columns, schema);
 			if (table.IsReadOnly)
 			{
-				return Stable.GetAdapterReadonOnly(@class, table, foreignKeyTables);
+				return GetAdapterReadonOnly(@class, table, foreignKeyTables);
 			}
+			var collectionType = ClrTypeHelper.GetCollectionType(@class.Properties);
 			if (collectionType == null)
 			{
-				return Stable.GetAdapter(@class, table, foreignKeyTables);
+				return GetAdapter(@class, table, foreignKeyTables);
 			}
-			return Stable.GetAdapterWithCollection(@class, table, foreignKeyTables);
+			return GetAdapterWithCollection(@class, table, foreignKeyTables);
 		}
+
+		private static string GetAdapter(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
+		{
+			var generator = new CodeGenerator();
+
+			var className = string.Format(@"{0}Adapter", table.Name);
+			generator.AddClassDefinition(className);
+
+			generator.BeginBlock();
+			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
+			if (fields.Length > 0)
+			{
+				// Add fields
+				generator.AddDictionaryFields(fields);
+				generator.AddEmptyLine();
+
+				// Add contructor
+				generator.AddContructor(fields, className);
+				generator.AddEmptyLine();
+			}
+
+			var addGetMethod = true;
+			foreach (var property in @class.Properties)
+			{
+				var type = property.Type;
+				if (!type.IsBuiltIn)
+				{
+					var name = type.Name;
+
+					var found = false;
+					foreach (var t in foreignKeyTables)
+					{
+						if (t.ClassName == name)
+						{
+							found = true;
+							break;
+						}
+					}
+					if (!found)
+					{
+						addGetMethod = false;
+						break;
+					}
+				}
+			}
+
+			if (addGetMethod)
+			{
+				// Add Get method
+				generator.AddGetMethod(@class.Name, table);
+				generator.AddEmptyLine();
+			}
+
+			// Add Creator
+			generator.AddCreator(@class, fields);
+
+			generator.EndBlock();
+
+			return generator.GetFormattedOutput();
+		}
+
+		private static string GetAdapterReadonOnly(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
+		{
+			var generator = new CodeGenerator();
+
+			var className = string.Format(@"{0}Adapter", table.Name);
+			generator.AddClassDefinition(className);
+
+			generator.BeginBlock();
+			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
+			if (fields.Length > 0)
+			{
+				// Add fields
+				generator.AddDictionaryFields(fields);
+				generator.AddEmptyLine();
+
+				// Add contructor
+				generator.AddContructor(fields, className);
+				generator.AddEmptyLine();
+			}
+
+			// Add Fill method
+			generator.AddFillMethod(@class.Name, table);
+			generator.AddEmptyLine();
+
+			// Add Creator
+			generator.AddCreator(@class, fields);
+			generator.AddEmptyLine();
+
+			// Add Selector
+			generator.AddSelector(@class.Name);
+
+			generator.EndBlock();
+
+			return generator.GetFormattedOutput();
+		}
+
+		private static string GetAdapterWithCollection(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
+		{
+			return @"TODO !!!";
+		}
+
+
+
+
+
+
+
 
 		private static void AppendIdReaderMethod(StringBuilder buffer)
 		{

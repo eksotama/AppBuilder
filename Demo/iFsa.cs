@@ -213,57 +213,63 @@ namespace Demo
 
 
 
-	public sealed class CalendarDaysAdapter
+	public sealed class ActivitiesAdapter
 	{
-		private readonly Dictionary<long, User> _users;
+		private readonly Dictionary<long, ActivityType> _activityTypes;
 
-		public CalendarDaysAdapter(Dictionary<long, User> users)
+		public ActivitiesAdapter(Dictionary<long, ActivityType> activityTypes)
 		{
-			if (users == null) throw new ArgumentNullException("users");
+			if (activityTypes == null) throw new ArgumentNullException("activityTypes");
 
-			_users = users;
+			_activityTypes = activityTypes;
 		}
 
-		public List<CalendarDay> GetAll()
+		public Activity Creator(IDataReader r, Visit visit)
 		{
-			var query = @"SELECT Id, VisitDate, Status, UserId FROM CalendarDays";
+			if (r == null) throw new ArgumentNullException("r");
+			if (visit == null) throw new ArgumentNullException("visit");
 
-			return QueryHelper.Get(query, this.CalendarDayCreator);
-		}
-
-		private CalendarDay CalendarDayCreator(IDataReader r)
-		{
 			var id = 0L;
 			if (!r.IsDBNull(0))
 			{
 				id = r.GetInt64(0);
 			}
-			var visitDate = DateTime.MinValue;
+			var activityType = default(ActivityType);
 			if (!r.IsDBNull(1))
 			{
-				visitDate = r.GetDateTime(1);
+				activityType = _activityTypes[r.GetInt64(1)];
 			}
-			var status = 0L;
+			var validFrom = DateTime.MinValue;
 			if (!r.IsDBNull(2))
 			{
-				status = r.GetInt64(2);
+				validFrom = r.GetDateTime(2);
 			}
-			var user = default(User);
+			var validTo = DateTime.MinValue;
 			if (!r.IsDBNull(3))
 			{
-				user = _users[r.GetInt64(3)];
+				validTo = r.GetDateTime(3);
 			}
 
-			return new CalendarDay(id, visitDate, status, user);
+			return new Activity(id, activityType, visit, validFrom, validTo);
 		}
 	}
 
 
-	
 
 
 
-	
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

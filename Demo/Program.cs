@@ -186,7 +186,12 @@ namespace Demo
 			var buffer = new StringBuilder();
 			foreach (var table in tables)
 			{
-				if ( table.Name != @"Activities")
+				//if ( table.Name != @"Brands")
+				//if (table.Name != @"Articles")
+				//if (table.IsReadOnly)
+				if (table.Name != @"Activities")
+				//if (table.Name != @"CalendarDays")
+				//if (false)
 				{
 					continue;
 				}
