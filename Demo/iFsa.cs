@@ -1,9 +1,121 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using AppBuilder.Db.DDL;
 
 namespace Demo
 {
+	public sealed class IFsa
+	{
+		public DbSchema Create()
+		{
+			var articleTypes = DbTable.ReadOnly(@"ArticleTypes", new[]
+			                                                     {
+				                                                     DbColumn.PrimaryKey(),
+				                                                     DbColumn.String(@"Name"),
+			                                                     });
+			var brands = DbTable.ReadOnly(@"Brands", new[]
+			                                         {
+				                                         DbColumn.PrimaryKey(),
+				                                         DbColumn.String(@"Name"),
+			                                         });
+
+			var flavours = DbTable.ReadOnly(@"Flavours", new[]
+			                                             {
+				                                             DbColumn.PrimaryKey(),
+				                                             DbColumn.String(@"Name"),
+			                                             });
+
+			var articles = DbTable.ReadOnly(@"Articles", new[]
+			                                             {
+				                                             DbColumn.PrimaryKey(),
+				                                             DbColumn.String(@"Name"),
+				                                             DbColumn.ForeignKey(articleTypes),
+				                                             DbColumn.ForeignKey(brands),
+				                                             DbColumn.ForeignKey(flavours),
+				                                             DbColumn.Decimal(@"Price"),
+			                                             });
+
+			var deliveryLocation = DbTable.ReadOnly(@"DeliveryLocations", new[]
+			                                                              {
+				                                                              DbColumn.PrimaryKey(),
+				                                                              DbColumn.String(@"Name"),
+			                                                              });
+			var outlets = DbTable.ReadOnly(@"Outlets", new[]
+			                                           {
+				                                           DbColumn.PrimaryKey(),
+				                                           DbColumn.String(@"Name"),
+				                                           DbColumn.String(@"Address"),
+				                                           DbColumn.String(@"City"),
+				                                           DbColumn.String(@"Street"),
+				                                           DbColumn.ForeignKey(deliveryLocation),
+			                                           });
+
+			var users = DbTable.ReadOnly(@"Users", new[]
+			                                       {
+				                                       DbColumn.PrimaryKey(),
+				                                       DbColumn.String(@"LoginName"),
+				                                       DbColumn.String(@"FullName"),
+			                                       });
+
+			var visits = DbTable.Normal(@"Visits", new[]
+			                                       {
+													   DbColumn.PrimaryKey(),
+													   DbColumn.DateTime(@"Date"),
+													   DbColumn.ForeignKey(outlets),
+													   DbColumn.ForeignKey(users),
+			                                       });
+
+			var activityTypes = DbTable.ReadOnly(@"ActivityTypes", new[]
+			                                                        {
+				                                                        DbColumn.PrimaryKey(),
+				                                                        DbColumn.String(@"Name"),
+				                                                        DbColumn.String(@"Code"),
+			                                                        });
+
+			var activities = DbTable.Normal(@"Activities", new[]
+			                                               {
+															   DbColumn.PrimaryKey(),
+															   DbColumn.ForeignKey(activityTypes),
+															   DbColumn.ForeignKey(visits),
+															   DbColumn.DateTime(@"ValidFrom"),
+															   DbColumn.DateTime(@"ValidTo"),
+			                                               }, @"Activity");
+
+			var calendarDays = DbTable.Normal(@"CalendarDays", new[]
+			                                                        {
+				                                                        DbColumn.PrimaryKey(),
+				                                                        DbColumn.DateTime(@"VisitDate"),
+				                                                        DbColumn.Integer(@"Status"),
+				                                                        DbColumn.ForeignKey(users),
+			                                                        });
+
+			var logs = DbTable.Normal(@"LogMessages", new[]
+			                                                        {
+				                                                        DbColumn.PrimaryKey(),
+				                                                        DbColumn.DateTime(@"Time"),
+				                                                        DbColumn.String(@"Type"),
+				                                                        DbColumn.String(@"Message"),
+			                                                        });
+
+			return new DbSchema(@"iFSA", new[]
+			           {
+						   articleTypes,
+						   brands,
+						   flavours,
+						   articles,
+						   deliveryLocation,
+						   outlets,
+						   users,						   
+						   activityTypes,
+						   activities,
+						   visits,
+						   calendarDays,
+						   logs
+			           });
+		}
+	}
+
 	public sealed class ArticleType
 	{
 		public long Id { get; private set; }
@@ -128,28 +240,6 @@ namespace Demo
 		}
 	}
 
-	public sealed class Visit
-	{
-		public long Id { get; set; }
-		public DateTime Date { get; private set; }
-		public Outlet Outlet { get; private set; }
-		public User User { get; private set; }
-		public List<Activity> Activities { get; private set; }
-
-		public Visit(long id, DateTime date, Outlet outlet, User user, List<Activity> activities)
-		{
-			if (outlet == null) throw new ArgumentNullException("outlet");
-			if (user == null) throw new ArgumentNullException("user");
-			if (activities == null) throw new ArgumentNullException("activities");
-
-			this.Id = id;
-			this.Date = date;
-			this.Outlet = outlet;
-			this.User = user;
-			this.Activities = activities;
-		}
-	}
-
 	public sealed class ActivityType
 	{
 		public long Id { get; private set; }
@@ -185,6 +275,28 @@ namespace Demo
 			this.Visit = visit;
 			this.ValidFrom = validFrom;
 			this.ValidTo = validTo;
+		}
+	}
+
+	public sealed class Visit
+	{
+		public long Id { get; set; }
+		public DateTime Date { get; private set; }
+		public Outlet Outlet { get; private set; }
+		public User User { get; private set; }
+		public List<Activity> Activities { get; private set; }
+
+		public Visit(long id, DateTime date, Outlet outlet, User user, List<Activity> activities)
+		{
+			if (outlet == null) throw new ArgumentNullException("outlet");
+			if (user == null) throw new ArgumentNullException("user");
+			if (activities == null) throw new ArgumentNullException("activities");
+
+			this.Id = id;
+			this.Date = date;
+			this.Outlet = outlet;
+			this.User = user;
+			this.Activities = activities;
 		}
 	}
 
@@ -225,8 +337,417 @@ namespace Demo
 		}
 	}
 
+	public sealed class ArticleTypesAdapter
+	{
+		public void Fill(Dictionary<long, ArticleType> articleTypes)
+		{
+			if (articleTypes == null) throw new ArgumentNullException("articleTypes");
+
+			var query = @"SELECT Id, Name FROM ArticleTypes";
+
+			QueryHelper.Fill(articleTypes, query, this.Creator, this.Selector);
+		}
+
+		private ArticleType Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var name = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				name = r.GetString(1);
+			}
+
+			return new ArticleType(id, name);
+		}
+
+		private long Selector(ArticleType a) { return a.Id; }
+	}
+
+	public sealed class BrandsAdapter
+	{
+		public void Fill(Dictionary<long, Brand> brands)
+		{
+			if (brands == null) throw new ArgumentNullException("brands");
+
+			var query = @"SELECT Id, Name FROM Brands";
+
+			QueryHelper.Fill(brands, query, this.Creator, this.Selector);
+		}
+
+		private Brand Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var name = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				name = r.GetString(1);
+			}
+
+			return new Brand(id, name);
+		}
+
+		private long Selector(Brand b) { return b.Id; }
+	}
 
 
+	public sealed class FlavoursAdapter
+	{
+		public void Fill(Dictionary<long, Flavour> flavours)
+		{
+			if (flavours == null) throw new ArgumentNullException("flavours");
+
+			var query = @"SELECT Id, Name FROM Flavours";
+
+			QueryHelper.Fill(flavours, query, this.Creator, this.Selector);
+		}
+
+		private Flavour Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var name = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				name = r.GetString(1);
+			}
+
+			return new Flavour(id, name);
+		}
+
+		private long Selector(Flavour f) { return f.Id; }
+	}
+
+
+	public sealed class ArticlesAdapter
+	{
+		private readonly Dictionary<long, ArticleType> _articleTypes;
+		private readonly Dictionary<long, Brand> _brands;
+		private readonly Dictionary<long, Flavour> _flavours;
+
+		public ArticlesAdapter(Dictionary<long, ArticleType> articleTypes, Dictionary<long, Brand> brands, Dictionary<long, Flavour> flavours)
+		{
+			if (articleTypes == null) throw new ArgumentNullException("articleTypes");
+			if (brands == null) throw new ArgumentNullException("brands");
+			if (flavours == null) throw new ArgumentNullException("flavours");
+
+			_articleTypes = articleTypes;
+			_brands = brands;
+			_flavours = flavours;
+		}
+
+		public void Fill(Dictionary<long, Article> articles)
+		{
+			if (articles == null) throw new ArgumentNullException("articles");
+
+			var query = @"SELECT Id, Name, ArticleTypeId, BrandId, FlavourId, Price FROM Articles";
+
+			QueryHelper.Fill(articles, query, this.Creator, this.Selector);
+		}
+
+		private Article Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var name = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				name = r.GetString(1);
+			}
+			var articleType = default(ArticleType);
+			if (!r.IsDBNull(2))
+			{
+				articleType = _articleTypes[r.GetInt64(2)];
+			}
+			var brand = default(Brand);
+			if (!r.IsDBNull(3))
+			{
+				brand = _brands[r.GetInt64(3)];
+			}
+			var flavour = default(Flavour);
+			if (!r.IsDBNull(4))
+			{
+				flavour = _flavours[r.GetInt64(4)];
+			}
+			var price = 0M;
+			if (!r.IsDBNull(5))
+			{
+				price = r.GetDecimal(5);
+			}
+
+			return new Article(id, name, articleType, brand, flavour, price);
+		}
+
+		private long Selector(Article a) { return a.Id; }
+	}
+
+
+	public sealed class DeliveryLocationsAdapter
+	{
+		public void Fill(Dictionary<long, DeliveryLocation> deliveryLocations)
+		{
+			if (deliveryLocations == null) throw new ArgumentNullException("deliveryLocations");
+
+			var query = @"SELECT Id, Name FROM DeliveryLocations";
+
+			QueryHelper.Fill(deliveryLocations, query, this.Creator, this.Selector);
+		}
+
+		private DeliveryLocation Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var name = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				name = r.GetString(1);
+			}
+
+			return new DeliveryLocation(id, name);
+		}
+
+		private long Selector(DeliveryLocation d) { return d.Id; }
+	}
+
+
+	public sealed class OutletsAdapter
+	{
+		private readonly Dictionary<long, DeliveryLocation> _deliveryLocations;
+
+		public OutletsAdapter(Dictionary<long, DeliveryLocation> deliveryLocations)
+		{
+			if (deliveryLocations == null) throw new ArgumentNullException("deliveryLocations");
+
+			_deliveryLocations = deliveryLocations;
+		}
+
+		public void Fill(Dictionary<long, Outlet> outlets)
+		{
+			if (outlets == null) throw new ArgumentNullException("outlets");
+
+			var query = @"SELECT Id, Name, Address, City, Street, DeliveryLocationId FROM Outlets";
+
+			QueryHelper.Fill(outlets, query, this.Creator, this.Selector);
+		}
+
+		private Outlet Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var name = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				name = r.GetString(1);
+			}
+			var address = string.Empty;
+			if (!r.IsDBNull(2))
+			{
+				address = r.GetString(2);
+			}
+			var city = string.Empty;
+			if (!r.IsDBNull(3))
+			{
+				city = r.GetString(3);
+			}
+			var street = string.Empty;
+			if (!r.IsDBNull(4))
+			{
+				street = r.GetString(4);
+			}
+			var deliveryLocation = default(DeliveryLocation);
+			if (!r.IsDBNull(5))
+			{
+				deliveryLocation = _deliveryLocations[r.GetInt64(5)];
+			}
+
+			return new Outlet(id, name, address, city, street, deliveryLocation);
+		}
+
+		private long Selector(Outlet o) { return o.Id; }
+	}
+
+
+	public sealed class UsersAdapter
+	{
+		public void Fill(Dictionary<long, User> users)
+		{
+			if (users == null) throw new ArgumentNullException("users");
+
+			var query = @"SELECT Id, LoginName, FullName FROM Users";
+
+			QueryHelper.Fill(users, query, this.Creator, this.Selector);
+		}
+
+		private User Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var loginName = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				loginName = r.GetString(1);
+			}
+			var fullName = string.Empty;
+			if (!r.IsDBNull(2))
+			{
+				fullName = r.GetString(2);
+			}
+
+			return new User(id, loginName, fullName);
+		}
+
+		private long Selector(User u) { return u.Id; }
+	}
+
+
+	public sealed class ActivityTypesAdapter
+	{
+		public void Fill(Dictionary<long, ActivityType> activityTypes)
+		{
+			if (activityTypes == null) throw new ArgumentNullException("activityTypes");
+
+			var query = @"SELECT Id, Name, Code FROM ActivityTypes";
+
+			QueryHelper.Fill(activityTypes, query, this.Creator, this.Selector);
+		}
+
+		private ActivityType Creator(IDataReader r)
+		{
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var name = string.Empty;
+			if (!r.IsDBNull(1))
+			{
+				name = r.GetString(1);
+			}
+			var code = string.Empty;
+			if (!r.IsDBNull(2))
+			{
+				code = r.GetString(2);
+			}
+
+			return new ActivityType(id, name, code);
+		}
+
+		private long Selector(ActivityType a) { return a.Id; }
+	}
+
+
+	public sealed class ActivitiesAdapter
+	{
+		private readonly Dictionary<long, ActivityType> _activityTypes;
+
+		public ActivitiesAdapter(Dictionary<long, ActivityType> activityTypes)
+		{
+			if (activityTypes == null) throw new ArgumentNullException("activityTypes");
+
+			_activityTypes = activityTypes;
+		}
+
+		public Activity Creator(IDataReader r, Visit visit)
+		{
+			if (r == null) throw new ArgumentNullException("r");
+			if (visit == null) throw new ArgumentNullException("visit");
+
+			var id = 0L;
+			if (!r.IsDBNull(0))
+			{
+				id = r.GetInt64(0);
+			}
+			var activityType = default(ActivityType);
+			if (!r.IsDBNull(1))
+			{
+				activityType = _activityTypes[r.GetInt64(1)];
+			}
+			var validFrom = DateTime.MinValue;
+			if (!r.IsDBNull(2))
+			{
+				validFrom = r.GetDateTime(2);
+			}
+			var validTo = DateTime.MinValue;
+			if (!r.IsDBNull(3))
+			{
+				validTo = r.GetDateTime(3);
+			}
+
+			return new Activity(id, activityType, visit, validFrom, validTo);
+		}
+
+		public void Insert(Activity activity)
+		{
+			if (activity == null) throw new ArgumentNullException("activity");
+
+			var query = @"INSERT INTO Activities(ActivityTypeId, VisitId, ValidFrom, ValidTo) VALUES (@activityTypeId, @visitId, @validFrom, @validTo)";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@activityTypeId", activity.ActivityType.Id),
+			QueryHelper.Parameter(@"@visitId", activity.Visit.Id),
+			QueryHelper.Parameter(@"@validFrom", activity.ValidFrom),
+			QueryHelper.Parameter(@"@validTo", activity.ValidTo),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+			activity.Id = Convert.ToInt64(QueryHelper.ExecuteScalar(@"SELECT LAST_INSERT_ROWID()"));
+		}
+
+		public void Update(Activity activity)
+		{
+			if (activity == null) throw new ArgumentNullException("activity");
+
+			var query = @"UPDATE Activities SET ActivityTypeId = @activityTypeId, VisitId = @visitId, ValidFrom = @validFrom, ValidTo = @validTo WHERE Id = @id";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"@id", activity.Id),
+			QueryHelper.Parameter(@"@activityTypeId", activity.ActivityType.Id),
+			QueryHelper.Parameter(@"@visitId", activity.Visit.Id),
+			QueryHelper.Parameter(@"@validFrom", activity.ValidFrom),
+			QueryHelper.Parameter(@"@validTo", activity.ValidTo),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
+
+		public void Delete(Activity activity)
+		{
+			if (activity == null) throw new ArgumentNullException("activity");
+
+			var query = @"DELETE FROM Activities WHERE Id = @id";
+
+			var sqlParams = new[]
+		{
+			QueryHelper.Parameter(@"Id", activity.Id),
+		};
+
+			QueryHelper.ExecuteQuery(query, sqlParams);
+		}
+	}
 
 
 	public sealed class VisitsAdapter
@@ -326,107 +847,6 @@ namespace Demo
 			var sqlParams = new[]
 		{
 			QueryHelper.Parameter(@"Id", visit.Id),
-		};
-
-			QueryHelper.ExecuteQuery(query, sqlParams);
-		}
-	}
-
-
-
-
-
-
-
-
-
-
-
-	public sealed class ActivitiesAdapter
-	{
-		private readonly Dictionary<long, ActivityType> _activityTypes;
-
-		public ActivitiesAdapter(Dictionary<long, ActivityType> activityTypes)
-		{
-			if (activityTypes == null) throw new ArgumentNullException("activityTypes");
-
-			_activityTypes = activityTypes;
-		}
-
-		public Activity Creator(IDataReader r, Visit visit)
-		{
-			if (r == null) throw new ArgumentNullException("r");
-			if (visit == null) throw new ArgumentNullException("visit");
-
-			var id = 0L;
-			if (!r.IsDBNull(0))
-			{
-				id = r.GetInt64(0);
-			}
-			var activityType = default(ActivityType);
-			if (!r.IsDBNull(1))
-			{
-				activityType = _activityTypes[r.GetInt64(1)];
-			}
-			var validFrom = DateTime.MinValue;
-			if (!r.IsDBNull(2))
-			{
-				validFrom = r.GetDateTime(2);
-			}
-			var validTo = DateTime.MinValue;
-			if (!r.IsDBNull(3))
-			{
-				validTo = r.GetDateTime(3);
-			}
-
-			return new Activity(id, activityType, visit, validFrom, validTo);
-		}
-
-		public void Insert(Activity activity)
-		{
-			if (activity == null) throw new ArgumentNullException("activity");
-
-			var query = @"INSERT INTO Activities(ActivityTypeId, VisitId, ValidFrom, ValidTo) VALUES (@activityTypeId, @visitId, @validFrom, @validTo)";
-
-			var sqlParams = new[]
-		{
-			QueryHelper.Parameter(@"@activityTypeId", activity.ActivityType.Id),
-			QueryHelper.Parameter(@"@visitId", activity.Visit.Id),
-			QueryHelper.Parameter(@"@validFrom", activity.ValidFrom),
-			QueryHelper.Parameter(@"@validTo", activity.ValidTo),
-		};
-
-			QueryHelper.ExecuteQuery(query, sqlParams);
-			activity.Id = Convert.ToInt64(QueryHelper.ExecuteScalar(@"SELECT LAST_INSERT_ROWID()"));
-		}
-
-		public void Update(Activity activity)
-		{
-			if (activity == null) throw new ArgumentNullException("activity");
-
-			var query = @"UPDATE Activities SET ActivityTypeId = @activityTypeId, VisitId = @visitId, ValidFrom = @validFrom, ValidTo = @validTo WHERE Id = @id";
-
-			var sqlParams = new[]
-		{
-			QueryHelper.Parameter(@"@id", activity.Id),
-			QueryHelper.Parameter(@"@activityTypeId", activity.ActivityType.Id),
-			QueryHelper.Parameter(@"@visitId", activity.Visit.Id),
-			QueryHelper.Parameter(@"@validFrom", activity.ValidFrom),
-			QueryHelper.Parameter(@"@validTo", activity.ValidTo),
-		};
-
-			QueryHelper.ExecuteQuery(query, sqlParams);
-		}
-
-		public void Delete(Activity activity)
-		{
-			if (activity == null) throw new ArgumentNullException("activity");
-
-			var query = @"DELETE FROM Activities WHERE Id = @id";
-
-			var sqlParams = new[]
-		{
-			QueryHelper.Parameter(@"Id", activity.Id),
 		};
 
 			QueryHelper.ExecuteQuery(query, sqlParams);
@@ -613,77 +1033,124 @@ namespace Demo
 	}
 
 
+	public sealed class ArticleTypesHelper
+	{
+		private readonly Dictionary<long, ArticleType> _articleTypes = new Dictionary<long, ArticleType>();
+
+		public Dictionary<long, ArticleType> ArticleTypes { get { return _articleTypes; } }
+
+		public void Load(ArticleTypesAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+
+			adapter.Fill(this.ArticleTypes);
+		}
+	}
 
 
+	public sealed class BrandsHelper
+	{
+		private readonly Dictionary<long, Brand> _brands = new Dictionary<long, Brand>();
+
+		public Dictionary<long, Brand> Brands { get { return _brands; } }
+
+		public void Load(BrandsAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+
+			adapter.Fill(this.Brands);
+		}
+	}
 
 
+	public sealed class FlavoursHelper
+	{
+		private readonly Dictionary<long, Flavour> _flavours = new Dictionary<long, Flavour>();
+
+		public Dictionary<long, Flavour> Flavours { get { return _flavours; } }
+
+		public void Load(FlavoursAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+
+			adapter.Fill(this.Flavours);
+		}
+	}
 
 
-	//public sealed class VisitsAdapter
-	//{
-	//	private readonly Dictionary<long, Outlet> _outlets;
-	//	private readonly Dictionary<long, User> _users;
+	public sealed class ArticlesHelper
+	{
+		private readonly Dictionary<long, Article> _articles = new Dictionary<long, Article>();
 
-	//	public VisitsAdapter(Dictionary<long, Outlet> outlets, Dictionary<long, User> users)
-	//	{
-	//		if (outlets == null) throw new ArgumentNullException("outlets");
-	//		if (users == null) throw new ArgumentNullException("users");
+		public Dictionary<long, Article> Articles { get { return _articles; } }
 
-	//		_outlets = outlets;
-	//		_users = users;
-	//	}
+		public void Load(ArticlesAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
 
-	//	public List<Visit> GetAll()
-	//	{
-	//		// INNER JOIN
-	//		var query = @"SELECT Id, Date, OutletId, UserId FROM Visits v inner join activities a on v.id = a.visitId";
-
-	//		return QueryHelper.Get(query, this.IdReader, this.VisitCreator, this.ActivityCreator, this.Attach);
-	//	}
-
-	//	private long IdReader(IDataReader r)
-	//	{
-	//		return r.GetInt64(0);
-	//	}
-
-	//	private Visit VisitCreator(IDataReader r)
-	//	{
-	//		var id = 0L;
-	//		if (!r.IsDBNull(0))
-	//		{
-	//			id = r.GetInt64(0);
-	//		}
-	//		var date = DateTime.MinValue;
-	//		if (!r.IsDBNull(1))
-	//		{
-	//			date = r.GetDateTime(1);
-	//		}
-	//		var outlet = default(Outlet);
-	//		if (!r.IsDBNull(2))
-	//		{
-	//			outlet = _outlets[r.GetInt64(2)];
-	//		}
-	//		var user = default(User);
-	//		if (!r.IsDBNull(3))
-	//		{
-	//			user = _users[r.GetInt64(3)];
-	//		}
-	//		return new Visit(id, date, outlet, user, new List<Activity>());
-	//	}
-
-	//	private Activity ActivityCreator(IDataReader r, Visit visit)
-	//	{
-	//		// TODO : !!!
-	//		return null;
-	//	}
-
-	//	private void Attach(Visit v, Activity a)
-	//	{
-	//		v.Activities.Add(a);
-	//	}
-	//}
+			adapter.Fill(this.Articles);
+		}
+	}
 
 
+	public sealed class DeliveryLocationsHelper
+	{
+		private readonly Dictionary<long, DeliveryLocation> _deliveryLocations = new Dictionary<long, DeliveryLocation>();
+
+		public Dictionary<long, DeliveryLocation> DeliveryLocations { get { return _deliveryLocations; } }
+
+		public void Load(DeliveryLocationsAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+
+			adapter.Fill(this.DeliveryLocations);
+		}
+	}
+
+
+	public sealed class OutletsHelper
+	{
+		private readonly Dictionary<long, Outlet> _outlets = new Dictionary<long, Outlet>();
+
+		public Dictionary<long, Outlet> Outlets { get { return _outlets; } }
+
+		public void Load(OutletsAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+
+			adapter.Fill(this.Outlets);
+		}
+	}
+
+
+	public sealed class UsersHelper
+	{
+		private readonly Dictionary<long, User> _users = new Dictionary<long, User>();
+
+		public Dictionary<long, User> Users { get { return _users; } }
+
+		public void Load(UsersAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+
+			adapter.Fill(this.Users);
+		}
+	}
+
+
+	public sealed class ActivityTypesHelper
+	{
+		private readonly Dictionary<long, ActivityType> _activityTypes = new Dictionary<long, ActivityType>();
+
+		public Dictionary<long, ActivityType> ActivityTypes { get { return _activityTypes; } }
+
+		public void Load(ActivityTypesAdapter adapter)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+
+			adapter.Fill(this.ActivityTypes);
+		}
+	}
 
 
 

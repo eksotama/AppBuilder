@@ -34,7 +34,7 @@ namespace AppBuilder
 			AppendProperties(properties, buffer, readOnly);
 			AppendContructor(name, properties, buffer);
 
-			buffer.AppendLine(@"}");
+			buffer.Append(@"}");
 
 			return buffer.ToString();
 		}

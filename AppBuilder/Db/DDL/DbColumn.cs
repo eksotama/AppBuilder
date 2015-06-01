@@ -27,7 +27,7 @@ namespace AppBuilder.Db.DDL
 			return new DbColumn(DbColumnType.Integer, NameProvider.IdName, isPrimaryKey: true);
 		}
 
-		public static DbColumn ForeignKey(DbTable table, bool allowNull = false)
+		public static DbColumn ForeignKey(DbTable table, bool allowNull = false, string foreignKeyName = null)
 		{
 			if (table == null) throw new ArgumentNullException("table");
 
@@ -35,7 +35,7 @@ namespace AppBuilder.Db.DDL
 			{
 				if (column.IsPrimaryKey)
 				{
-					return new DbColumn(DbColumnType.Integer, NameProvider.GetDbForeignKeyName(table.ClassName), allowNull) { DbForeignKey = new DbForeignKey(table.Name, column.Name) };
+					return new DbColumn(DbColumnType.Integer, foreignKeyName ?? NameProvider.GetDbForeignKeyName(table.ClassName), allowNull) { DbForeignKey = new DbForeignKey(table.Name, column.Name) };
 				}
 			}
 			throw new Exception(@"No Primary Key column.");

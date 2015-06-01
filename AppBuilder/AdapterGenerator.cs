@@ -40,7 +40,10 @@ namespace AppBuilder
 				fields[index] = new Field(table.ClassName, NameProvider.ToParameterName(table.Name));
 			}
 
-			fields[fields.Length - 1] = new Field(detailsTable.Name + @"Adapter", @"adapter", false);
+			if (detailsTable != null)
+			{
+				fields[fields.Length - 1] = new Field(detailsTable.Name + @"Adapter", @"adapter", false);
+			}
 
 			return fields;
 		}
@@ -101,7 +104,20 @@ namespace AppBuilder
 					var collectionType = ClrTypeHelper.GetCollectionType(DbTableConverter.ToClrClass(foreignKeyTable, schema.Tables).Properties);
 					if (collectionType == null)
 					{
-						foreignKeyTables.Add(foreignKeyTable);
+						var name = foreignKeyTable.Name;
+						var exists = false;
+						foreach (var t in foreignKeyTables)
+						{
+							if (t.Name == name)
+							{
+								exists = true;
+								break;
+							}
+						}
+						if (!exists)
+						{
+							foreignKeyTables.Add(foreignKeyTable);
+						}
 					}
 				}
 			}
