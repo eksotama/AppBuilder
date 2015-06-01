@@ -220,11 +220,11 @@ namespace Demo
 			{
 				//if ( table.Name != @"Brands")
 				//if (table.Name != @"Articles")
-				if (table.IsReadOnly)
+				//if (table.IsReadOnly)
 				//if (table.Name != @"Activities")
 				//if (table.Name != @"CalendarDays")
 				//if (false)
-				//if (table.Name != @"Visits")
+				if (table.Name != @"Visits")
 				//if (table.Name == @"Visits")
 				{
 					continue;

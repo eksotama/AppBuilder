@@ -233,26 +233,24 @@ namespace Demo
 	{
 		private readonly Dictionary<long, Outlet> _outlets;
 		private readonly Dictionary<long, User> _users;
+		private readonly ActivitiesAdapter _adapter;
 
-		public VisitsAdapter(Dictionary<long, Outlet> outlets, Dictionary<long, User> users)
+		public VisitsAdapter(Dictionary<long, Outlet> outlets, Dictionary<long, User> users, ActivitiesAdapter adapter)
 		{
 			if (outlets == null) throw new ArgumentNullException("outlets");
 			if (users == null) throw new ArgumentNullException("users");
+			if (adapter == null) throw new ArgumentNullException("adapter");
 
 			_outlets = outlets;
 			_users = users;
+			_adapter = adapter;
 		}
 
 		public List<Visit> GetAll()
 		{
 			var query = @"SELECT _v.Id, _v.Date, _v.OutletId, _v.UserId, _a.Id, _a.ActivityTypeId, _a.ValidFrom, _a.ValidTo FROM Visits _v  INNER JOIN Activities _a ON _v.Id = _a.VisitId";
 
-			return QueryHelper.Get<Visit, Activity>(query, this.IdReader, this.Creator, default(ActivitiesAdapter).Creator, this.Attach);
-		}
-
-		private void Attach(Visit visit, Activity activity)
-		{
-			visit.Activities.Add(activity);
+			return QueryHelper.Get(query, this.IdReader, this.Creator, _adapter.Creator, (v, a) => v.Activities.Add(a));
 		}
 
 		private long IdReader(IDataReader arg)
@@ -605,6 +603,8 @@ namespace Demo
 			QueryHelper.ExecuteQuery(query, sqlParams);
 		}
 	}
+
+
 
 
 
