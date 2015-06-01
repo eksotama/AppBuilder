@@ -22,6 +22,46 @@ namespace AppBuilder
 			this.Name = name;
 			this.IsDictionary = isDictionary;
 		}
+
+		public static Field[] GetDictionaryFields(DbTable[] tables, DbTable detailsTable = null)
+		{
+			if (tables == null) throw new ArgumentNullException("tables");
+
+			var totalFields = tables.Length;
+			if (detailsTable != null)
+			{
+				totalFields++;
+			}
+			var fields = new Field[totalFields];
+
+			for (var index = 0; index < tables.Length; index++)
+			{
+				var table = tables[index];
+				fields[index] = new Field(table.ClassName, NameProvider.ToParameterName(table.Name));
+			}
+
+			fields[fields.Length - 1] = new Field(detailsTable.Name + @"Adapter", @"adapter", false);
+
+			return fields;
+		}
+
+		public static Field FindFieldByType(IEnumerable<Field> fields, ClrType type)
+		{
+			if (fields == null) throw new ArgumentNullException("fields");
+			if (type == null) throw new ArgumentNullException("type");
+
+			var typeName = type.Name;
+
+			foreach (var field in fields)
+			{
+				if (field.Type == typeName)
+				{
+					return field;
+				}
+			}
+
+			return null;
+		}
 	}
 
 	public static class ClrTypeHelper
@@ -78,42 +118,6 @@ namespace AppBuilder
 				if (table.Name == foreignKeyTableName)
 				{
 					return table;
-				}
-			}
-
-			return null;
-		}
-	}
-
-	public static class FieldHelper
-	{
-		public static Field[] GetDictionaryFields(DbTable[] tables)
-		{
-			if (tables == null) throw new ArgumentNullException("tables");
-
-			var fields = new Field[tables.Length];
-
-			for (var index = 0; index < tables.Length; index++)
-			{
-				var table = tables[index];
-				fields[index] = new Field(table.ClassName, NameProvider.ToParameterName(table.Name));
-			}
-
-			return fields;
-		}
-
-		public static Field FindFieldByType(IEnumerable<Field> fields, ClrType type)
-		{
-			if (fields == null) throw new ArgumentNullException("fields");
-			if (type == null) throw new ArgumentNullException("type");
-
-			var typeName = type.Name;
-
-			foreach (var field in fields)
-			{
-				if (field.Type == typeName)
-				{
-					return field;
 				}
 			}
 
@@ -320,7 +324,7 @@ namespace AppBuilder
 				var property = properties[i];
 				var name = names[i];
 				var type = property.Type;
-				var readValue = type.IsBuiltIn || (FieldHelper.FindFieldByType(fields, property.Type)) != null;
+				var readValue = type.IsBuiltIn || (Field.FindFieldByType(fields, property.Type)) != null;
 				if (!readValue && !type.IsCollection)
 				{
 					parameter = new Field(type.Name, name);
@@ -348,7 +352,7 @@ namespace AppBuilder
 				var type = property.Type;
 
 				Field field = null;
-				var readValue = type.IsBuiltIn || (field = FieldHelper.FindFieldByType(fields, property.Type)) != null;
+				var readValue = type.IsBuiltIn || (field = Field.FindFieldByType(fields, property.Type)) != null;
 				if (readValue)
 				{
 					var value = readerIndex + readerIndexOffset;
@@ -534,31 +538,17 @@ namespace AppBuilder
 			{
 				return GetAdapter(@class, table, foreignKeyTables);
 			}
-
-			var collectionTable = FindCollectionTable(schema, collectionType);
-
-			return GetAdapterWithCollection(@class, table, foreignKeyTables, collectionTable);
+			return GetAdapterWithCollection(@class, table, foreignKeyTables, FindCollectionTable(schema, collectionType));
 		}
 
 		private static string GetAdapterReadonOnly(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
 		{
 			var generator = new CodeGenerator();
 
-			var className = string.Format(@"{0}Adapter", table.Name);
-			generator.AddClassDefinition(className);
+			var className = AddClassDefinition(table, generator);
 
 			generator.BeginBlock();
-			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
-			if (fields.Length > 0)
-			{
-				// Add fields
-				generator.AddDictionaryFields(fields);
-				generator.AddEmptyLine();
-
-				// Add contructor
-				generator.AddContructor(fields, className);
-				generator.AddEmptyLine();
-			}
+			var fields = AddFiledsAndContructor(generator, className, foreignKeyTables);
 
 			// Add Fill method
 			generator.AddFillMethod(@class.Name, table);
@@ -580,21 +570,10 @@ namespace AppBuilder
 		{
 			var generator = new CodeGenerator();
 
-			var className = string.Format(@"{0}Adapter", table.Name);
-			generator.AddClassDefinition(className);
-
+			var className = AddClassDefinition(table, generator);
 			generator.BeginBlock();
-			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
-			if (fields.Length > 0)
-			{
-				// Add fields
-				generator.AddDictionaryFields(fields);
-				generator.AddEmptyLine();
 
-				// Add contructor
-				generator.AddContructor(fields, className);
-				generator.AddEmptyLine();
-			}
+			var fields = AddFiledsAndContructor(generator, className, foreignKeyTables);
 
 			var addGetMethod = true;
 			foreach (var property in @class.Properties)
@@ -609,6 +588,7 @@ namespace AppBuilder
 					}
 				}
 			}
+
 			if (addGetMethod)
 			{
 				// Add Get method
@@ -630,28 +610,10 @@ namespace AppBuilder
 		private static string GetAdapterWithCollection(ClrClass @class, DbTable table, DbTable[] foreignKeyTables, DbTable detailsTable)
 		{
 			var generator = new CodeGenerator();
-
-			var className = string.Format(@"{0}Adapter", table.Name);
-			generator.AddClassDefinition(className);
+			var className = AddClassDefinition(table, generator);
 
 			generator.BeginBlock();
-			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
-
-			var copy = new Field[fields.Length + 1];
-			Array.Copy(fields, copy, fields.Length);
-			copy[fields.Length] = new Field(detailsTable.Name + @"Adapter", @"adapter", false);
-			fields = copy;
-
-			if (fields.Length > 0)
-			{
-				// Add fields
-				generator.AddDictionaryFields(fields);
-				generator.AddEmptyLine();
-
-				// Add contructor
-				generator.AddContructor(fields, className);
-				generator.AddEmptyLine();
-			}
+			var fields = AddFiledsAndContructor(generator, className, foreignKeyTables, detailsTable);
 
 			// Add Get method
 			generator.AddGetWithDetailsMethod(@class.Name, table, detailsTable);
@@ -674,6 +636,31 @@ namespace AppBuilder
 			generator.EndBlock();
 
 			return generator.GetFormattedOutput();
+		}
+
+		private static string AddClassDefinition(DbTable table, CodeGenerator generator)
+		{
+			var className = string.Format(@"{0}Adapter", table.Name);
+
+			generator.AddClassDefinition(className);
+
+			return className;
+		}
+
+		private static Field[] AddFiledsAndContructor(CodeGenerator generator, string className, DbTable[] foreignKeyTables, DbTable detailsTable = null)
+		{
+			var fields = Field.GetDictionaryFields(foreignKeyTables, detailsTable);
+			if (fields.Length > 0)
+			{
+				// Add fields
+				generator.AddDictionaryFields(fields);
+				generator.AddEmptyLine();
+
+				// Add contructor
+				generator.AddContructor(fields, className);
+				generator.AddEmptyLine();
+			}
+			return fields;
 		}
 
 		private static void AddInsertUpdateDelete(CodeGenerator generator, ClrClass @class, DbTable table)
