@@ -276,7 +276,7 @@ namespace AppBuilder
 			this.EndBlock();
 		}
 
-		public void AddCreator(ClrClass @class, Field[] fields)
+		public void AddCreator(ClrClass @class, Field[] fields, int readerIndexOffset = 0)
 		{
 			var properties = @class.Properties;
 
@@ -330,18 +330,20 @@ namespace AppBuilder
 				var readValue = type.IsBuiltIn || (field = FindFieldByType(fields, property.Type)) != null;
 				if (readValue)
 				{
+					var value = readerIndex + readerIndexOffset;
+
 					_buffer.AppendLine(string.Format(@"var {0} = {1};", name, type.DefaultValue));
-					_buffer.AppendLine(string.Format(@"if (!r.IsDBNull({0}))", readerIndex));
+					_buffer.AppendLine(string.Format(@"if (!r.IsDBNull({0}))", value));
 
 					this.BeginBlock();
 
 					if (type.IsBuiltIn)
 					{
-						_buffer.AppendLine(string.Format(@"{0} = r.{1}({2});", name, type.ReaderMethod, readerIndex));
+						_buffer.AppendLine(string.Format(@"{0} = r.{1}({2});", name, type.ReaderMethod, value));
 					}
 					else
 					{
-						_buffer.AppendLine(string.Format(@"{0} = _{1}[r.{2}({3})];", name, field.Name, type.ReaderMethod, readerIndex));
+						_buffer.AppendLine(string.Format(@"{0} = _{1}[r.{2}({3})];", name, field.Name, type.ReaderMethod, value));
 					}
 
 					this.EndBlock();
@@ -492,6 +494,11 @@ namespace AppBuilder
 			_buffer.AppendLine(@"QueryHelper.ExecuteQuery(query, sqlParams);");
 
 			this.EndBlock();
+		}
+
+		public void AddIdReaderMethod(string name, DbTable table, DbTable detailsTable)
+		{
+			_buffer.AppendLine(string.Format(@"private long IdReader(IDataReader r) {{ return r.GetInt64(0); }}"));
 		}
 	}
 
@@ -649,8 +656,12 @@ namespace AppBuilder
 			generator.AddGetWithDetailsMethod(@class.Name, table, detailsTable);
 			generator.AddEmptyLine();
 
+			// Add IdReader method
+			generator.AddIdReaderMethod(@class.Name, table, detailsTable);
+			generator.AddEmptyLine();
+
 			// Add Creator
-			generator.AddCreator(@class, fields);
+			generator.AddCreator(@class, fields, detailsTable.Columns.Length - 1);
 			generator.AddEmptyLine();
 
 			// Add Insert

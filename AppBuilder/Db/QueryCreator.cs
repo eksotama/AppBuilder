@@ -34,29 +34,27 @@ namespace AppBuilder.Db
 			if (headerTable == null) throw new ArgumentNullException("headerTable");
 			if (detailsTable == null) throw new ArgumentNullException("detailsTable");
 
-			// TOOD : !!! single letters and only if thre's a clash, use _			
-			var headerAlias = @"_" + char.ToLowerInvariant(headerTable.Name[0]);
-			var detailsAlias = @"_" + char.ToLowerInvariant(detailsTable.Name[0]);
+			var headerAlias = Convert.ToString(char.ToLowerInvariant(headerTable.Name[0]));
+			var detailsAlias = Convert.ToString(char.ToLowerInvariant(detailsTable.Name[0]));
 			if (headerAlias == detailsAlias)
 			{
-				detailsAlias += @"1";
+				detailsAlias = @"_" + detailsAlias;
 			}
 
-			// TODO : !!! Select details first
 			var primaryKeyColumn = GetPrimaryKey(headerTable.Columns);
 			var foreignKeyColumn = GetForeignKey(detailsTable.Columns, headerTable);
 
 			var buffer = new StringBuilder();
 			buffer.Append(@"SELECT ");
-			AppendNames(buffer, GetColumnNames(headerTable.Columns, headerAlias));
-			AppendSeparator(buffer);
 			AppendNames(buffer, GetColumnNames(ExcludeColumn(detailsTable.Columns, foreignKeyColumn), detailsAlias));
+			AppendSeparator(buffer);
+			AppendNames(buffer, GetColumnNames(headerTable.Columns, headerAlias));
 			buffer.Append(@" FROM ");
 			buffer.Append(headerTable.Name);
 			buffer.Append(@" ");
 			buffer.Append(headerAlias);
 			buffer.Append(@" ");
-			buffer.Append(@" INNER JOIN ");
+			buffer.Append(@"INNER JOIN ");
 			buffer.Append(detailsTable.Name);
 			buffer.Append(@" ");
 			buffer.Append(detailsAlias);
@@ -254,8 +252,6 @@ namespace AppBuilder.Db
 		{
 			buffer.Append(@", ");
 		}
-
-
 
 		private static DbColumn GetPrimaryKey(DbColumn[] columns)
 		{

@@ -253,10 +253,7 @@ namespace Demo
 			return QueryHelper.Get(query, this.IdReader, this.Creator, _adapter.Creator, (v, a) => v.Activities.Add(a));
 		}
 
-		private long IdReader(IDataReader arg)
-		{
-			throw new NotImplementedException();
-		}
+		private long IdReader(IDataReader r) { return r.GetInt64(0); }
 
 		private Visit Creator(IDataReader r)
 		{
