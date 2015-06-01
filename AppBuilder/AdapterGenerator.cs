@@ -101,6 +101,24 @@ namespace AppBuilder
 
 			return fields;
 		}
+
+		public static Field FindFieldByType(IEnumerable<Field> fields, ClrType type)
+		{
+			if (fields == null) throw new ArgumentNullException("fields");
+			if (type == null) throw new ArgumentNullException("type");
+
+			var typeName = type.Name;
+
+			foreach (var field in fields)
+			{
+				if (field.Type == typeName)
+				{
+					return field;
+				}
+			}
+
+			return null;
+		}
 	}
 
 	public sealed class CodeGenerator
@@ -303,7 +321,7 @@ namespace AppBuilder
 				var property = properties[i];
 				var name = names[i];
 				var type = property.Type;
-				var readValue = type.IsBuiltIn || (FindFieldByType(fields, property.Type)) != null;
+				var readValue = type.IsBuiltIn || (FieldHelper.FindFieldByType(fields, property.Type)) != null;
 				if (!readValue && !type.IsCollection)
 				{
 					parameter = new Field(type.Name, name);
@@ -331,7 +349,7 @@ namespace AppBuilder
 				var type = property.Type;
 
 				Field field = null;
-				var readValue = type.IsBuiltIn || (field = FindFieldByType(fields, property.Type)) != null;
+				var readValue = type.IsBuiltIn || (field = FieldHelper.FindFieldByType(fields, property.Type)) != null;
 				if (readValue)
 				{
 					var value = readerIndex + readerIndexOffset;
@@ -362,23 +380,7 @@ namespace AppBuilder
 			this.EndBlock();
 		}
 
-		private static Field FindFieldByType(IEnumerable<Field> fields, ClrType type)
-		{
-			if (fields == null) throw new ArgumentNullException("fields");
-			if (type == null) throw new ArgumentNullException("type");
-
-			var typeName = type.Name;
-
-			foreach (var field in fields)
-			{
-				if (field.Type == typeName)
-				{
-					return field;
-				}
-			}
-
-			return null;
-		}
+		
 
 		public void AddInsert(ClrClass @class, DbTable table)
 		{
