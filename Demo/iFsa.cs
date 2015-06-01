@@ -250,7 +250,7 @@ namespace Demo
 		{
 			var query = @"SELECT a.Id, a.ActivityTypeId, a.ValidFrom, a.ValidTo, v.Id, v.Date, v.OutletId, v.UserId FROM Visits v INNER JOIN Activities a ON v.Id = a.VisitId";
 
-			return QueryHelper.Get(query, this.IdReader, this.Creator, _adapter.Creator, Attach);
+			return QueryHelper.Get(query, this.IdReader, this.Creator, _adapter.Creator, this.Attach);
 		}
 
 		private long IdReader(IDataReader r) { return r.GetInt64(0); }
@@ -331,6 +331,9 @@ namespace Demo
 			QueryHelper.ExecuteQuery(query, sqlParams);
 		}
 	}
+
+
+
 
 
 

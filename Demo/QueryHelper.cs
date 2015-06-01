@@ -129,9 +129,19 @@ namespace Demo
 			where THeader : class
 			where TDetail : class
 		{
+			return Get(query, idReader, headerCreator, detailCreator, attach, new IDbDataParameter[0]);
+		}
+
+		public static List<THeader> Get<THeader, TDetail>(string query, Func<IDataReader, long> idReader, Func<IDataReader, THeader> headerCreator, Func<IDataReader, THeader, TDetail> detailCreator, Action<THeader, TDetail> attach, IEnumerable<IDbDataParameter> parameters)
+			where THeader : class
+			where TDetail : class
+		{
 			if (query == null) throw new ArgumentNullException("query");
 			if (idReader == null) throw new ArgumentNullException("idReader");
 			if (headerCreator == null) throw new ArgumentNullException("headerCreator");
+			if (detailCreator == null) throw new ArgumentNullException("detailCreator");
+			if (attach == null) throw new ArgumentNullException("attach");
+			if (parameters == null) throw new ArgumentNullException("parameters");
 
 			var items = new Dictionary<long, THeader>();
 
