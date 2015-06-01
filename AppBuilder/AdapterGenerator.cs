@@ -12,14 +12,16 @@ namespace AppBuilder
 	{
 		public string Type { get; private set; }
 		public string Name { get; private set; }
+		public bool IsDictionary { get; private set; }
 
-		public Field(string type, string name)
+		public Field(string type, string name, bool isDictionary = true)
 		{
 			if (type == null) throw new ArgumentNullException("type");
 			if (name == null) throw new ArgumentNullException("name");
 
 			this.Type = type;
 			this.Name = name;
+			this.IsDictionary = isDictionary;
 		}
 	}
 
@@ -179,7 +181,12 @@ namespace AppBuilder
 
 		private string GetDictionaryField(Field field)
 		{
-			return GetDictionaryField(field.Type);
+			var type = field.Type;
+			if (field.IsDictionary)
+			{
+				return GetDictionaryField(type);
+			}
+			return type;
 		}
 
 		private string GetDictionaryField(string type)
@@ -641,6 +648,12 @@ namespace AppBuilder
 
 			generator.BeginBlock();
 			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
+
+			var copy = new Field[fields.Length + 1];
+			Array.Copy(fields, copy, fields.Length);
+			copy[fields.Length] = new Field(detailsTable.Name + @"Adapter", @"adapter", false);
+			fields = copy;
+
 			if (fields.Length > 0)
 			{
 				// Add fields

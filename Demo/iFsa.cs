@@ -227,7 +227,7 @@ namespace Demo
 
 
 
-
+	
 
 	public sealed class VisitsAdapter
 	{
