@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using AppBuilder.Clr;
 using AppBuilder.Db;
@@ -274,11 +273,9 @@ namespace AppBuilder
 
 			this.BeginBlock();
 
-			//return QueryHelper.Get<Visit, Activity>(query, this.IdReader, this.Creator, null, null);
-
 			_buffer.AppendLine(string.Format(@"var query = @""{0}"";", QueryCreator.GetSelect(table, detailsTable).Statement));
 			this.AddEmptyLine();
-			_buffer.AppendLine(@"return QueryHelper.Get(query, this.IdReader, this.Creator);");
+			_buffer.AppendLine(@"return QueryHelper.Get(query, this.IdReader, this.Creator, _adapter.Creator, this.Attach);");
 
 			this.EndBlock();
 		}
@@ -503,9 +500,20 @@ namespace AppBuilder
 			this.EndBlock();
 		}
 
-		public void AddIdReaderMethod(string name, DbTable table, DbTable detailsTable)
+		public void AddIdReaderMethod()
 		{
 			_buffer.AppendLine(string.Format(@"private long IdReader(IDataReader r) {{ return r.GetInt64(0); }}"));
+		}
+
+		public void AddAttachMethod(string name, DbTable table, DbTable detailsTable)
+		{
+			var headerAlias = Convert.ToString(char.ToLowerInvariant(table.ClassName[0]));
+			var detailsAlias = Convert.ToString(char.ToLowerInvariant(detailsTable.ClassName[0]));
+			if (headerAlias == detailsAlias)
+			{
+				detailsAlias += @"1";
+			}
+			_buffer.AppendLine(string.Format(@"private void Attach({0} {1}, {2} {3}) {{ {1}.{4}.Add({3}); }}", table.ClassName, headerAlias, detailsTable.ClassName, detailsAlias, detailsTable.Name));
 		}
 	}
 
@@ -670,7 +678,11 @@ namespace AppBuilder
 			generator.AddEmptyLine();
 
 			// Add IdReader method
-			generator.AddIdReaderMethod(@class.Name, table, detailsTable);
+			generator.AddIdReaderMethod();
+			generator.AddEmptyLine();
+
+			// Add Attach method
+			generator.AddAttachMethod(@class.Name, table, detailsTable);
 			generator.AddEmptyLine();
 
 			// Add Creator

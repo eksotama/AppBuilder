@@ -227,7 +227,7 @@ namespace Demo
 
 
 
-	
+
 
 	public sealed class VisitsAdapter
 	{
@@ -248,34 +248,36 @@ namespace Demo
 
 		public List<Visit> GetAll()
 		{
-			var query = @"SELECT _v.Id, _v.Date, _v.OutletId, _v.UserId, _a.Id, _a.ActivityTypeId, _a.ValidFrom, _a.ValidTo FROM Visits _v  INNER JOIN Activities _a ON _v.Id = _a.VisitId";
+			var query = @"SELECT a.Id, a.ActivityTypeId, a.ValidFrom, a.ValidTo, v.Id, v.Date, v.OutletId, v.UserId FROM Visits v INNER JOIN Activities a ON v.Id = a.VisitId";
 
-			return QueryHelper.Get(query, this.IdReader, this.Creator, _adapter.Creator, (v, a) => v.Activities.Add(a));
+			return QueryHelper.Get(query, this.IdReader, this.Creator, _adapter.Creator, Attach);
 		}
 
 		private long IdReader(IDataReader r) { return r.GetInt64(0); }
 
+		private void Attach(Visit v, Activity a) { v.Activities.Add(a); }
+
 		private Visit Creator(IDataReader r)
 		{
 			var id = 0L;
-			if (!r.IsDBNull(0))
+			if (!r.IsDBNull(4))
 			{
-				id = r.GetInt64(0);
+				id = r.GetInt64(4);
 			}
 			var date = DateTime.MinValue;
-			if (!r.IsDBNull(1))
+			if (!r.IsDBNull(5))
 			{
-				date = r.GetDateTime(1);
+				date = r.GetDateTime(5);
 			}
 			var outlet = default(Outlet);
-			if (!r.IsDBNull(2))
+			if (!r.IsDBNull(6))
 			{
-				outlet = _outlets[r.GetInt64(2)];
+				outlet = _outlets[r.GetInt64(6)];
 			}
 			var user = default(User);
-			if (!r.IsDBNull(3))
+			if (!r.IsDBNull(7))
 			{
-				user = _users[r.GetInt64(3)];
+				user = _users[r.GetInt64(7)];
 			}
 
 			return new Visit(id, date, outlet, user, new List<Activity>());
@@ -329,6 +331,12 @@ namespace Demo
 			QueryHelper.ExecuteQuery(query, sqlParams);
 		}
 	}
+
+
+
+
+
+
 
 
 	public sealed class ActivitiesAdapter
