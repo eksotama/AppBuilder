@@ -258,7 +258,6 @@ namespace AppBuilder
 		public void AddFillMethod(string className, DbTable table)
 		{
 			var name = NameProvider.ToParameterName(table.Name);
-
 			_buffer.AppendLine(string.Format(@"public void Fill({0} {1})", GetDictionaryField(className), name));
 
 			this.BeginBlock();
@@ -379,8 +378,6 @@ namespace AppBuilder
 
 			this.EndBlock();
 		}
-
-		
 
 		public void AddInsert(ClrClass @class, DbTable table)
 		{
@@ -507,7 +504,7 @@ namespace AppBuilder
 			_buffer.AppendLine(string.Format(@"private long IdReader(IDataReader r) {{ return r.GetInt64(0); }}"));
 		}
 
-		public void AddAttachMethod(string name, DbTable table, DbTable detailsTable)
+		public void AddAttachMethod(DbTable table, DbTable detailsTable)
 		{
 			var headerAlias = Convert.ToString(char.ToLowerInvariant(table.ClassName[0]));
 			var detailsAlias = Convert.ToString(char.ToLowerInvariant(detailsTable.ClassName[0]));
@@ -538,19 +535,45 @@ namespace AppBuilder
 				return GetAdapter(@class, table, foreignKeyTables);
 			}
 
+			var collectionTable = FindCollectionTable(schema, collectionType);
 
-			var collectionTable = default(DbTable);
-
-			var typeName = collectionType.Name;
-			foreach (var t in schema.Tables)
-			{
-				if (ClrType.GetUserCollectionTypeName(t.ClassName) == typeName)
-				{
-					collectionTable = t;
-					break;
-				}
-			}
 			return GetAdapterWithCollection(@class, table, foreignKeyTables, collectionTable);
+		}
+
+		private static string GetAdapterReadonOnly(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
+		{
+			var generator = new CodeGenerator();
+
+			var className = string.Format(@"{0}Adapter", table.Name);
+			generator.AddClassDefinition(className);
+
+			generator.BeginBlock();
+			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
+			if (fields.Length > 0)
+			{
+				// Add fields
+				generator.AddDictionaryFields(fields);
+				generator.AddEmptyLine();
+
+				// Add contructor
+				generator.AddContructor(fields, className);
+				generator.AddEmptyLine();
+			}
+
+			// Add Fill method
+			generator.AddFillMethod(@class.Name, table);
+			generator.AddEmptyLine();
+
+			// Add Creator
+			generator.AddCreator(@class, fields);
+			generator.AddEmptyLine();
+
+			// Add Selector
+			generator.AddSelector(@class.Name);
+
+			generator.EndBlock();
+
+			return generator.GetFormattedOutput();
 		}
 
 		private static string GetAdapter(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
@@ -597,52 +620,7 @@ namespace AppBuilder
 			generator.AddCreator(@class, fields);
 			generator.AddEmptyLine();
 
-			// Add Insert
-			generator.AddInsert(@class, table);
-			generator.AddEmptyLine();
-
-			// Add Update
-			generator.AddUpdate(@class, table);
-			generator.AddEmptyLine();
-
-			// Add Delete
-			generator.AddDelete(@class, table);
-
-			generator.EndBlock();
-
-			return generator.GetFormattedOutput();
-		}
-
-		private static string GetAdapterReadonOnly(ClrClass @class, DbTable table, DbTable[] foreignKeyTables)
-		{
-			var generator = new CodeGenerator();
-
-			var className = string.Format(@"{0}Adapter", table.Name);
-			generator.AddClassDefinition(className);
-
-			generator.BeginBlock();
-			var fields = FieldHelper.GetDictionaryFields(foreignKeyTables);
-			if (fields.Length > 0)
-			{
-				// Add fields
-				generator.AddDictionaryFields(fields);
-				generator.AddEmptyLine();
-
-				// Add contructor
-				generator.AddContructor(fields, className);
-				generator.AddEmptyLine();
-			}
-
-			// Add Fill method
-			generator.AddFillMethod(@class.Name, table);
-			generator.AddEmptyLine();
-
-			// Add Creator
-			generator.AddCreator(@class, fields);
-			generator.AddEmptyLine();
-
-			// Add Selector
-			generator.AddSelector(@class.Name);
+			AddInsertUpdateDelete(generator, @class, table);
 
 			generator.EndBlock();
 
@@ -684,13 +662,22 @@ namespace AppBuilder
 			generator.AddEmptyLine();
 
 			// Add Attach method
-			generator.AddAttachMethod(@class.Name, table, detailsTable);
+			generator.AddAttachMethod(table, detailsTable);
 			generator.AddEmptyLine();
 
 			// Add Creator
 			generator.AddCreator(@class, fields, detailsTable.Columns.Length - 1);
 			generator.AddEmptyLine();
 
+			AddInsertUpdateDelete(generator, @class, table);
+
+			generator.EndBlock();
+
+			return generator.GetFormattedOutput();
+		}
+
+		private static void AddInsertUpdateDelete(CodeGenerator generator, ClrClass @class, DbTable table)
+		{
 			// Add Insert
 			generator.AddInsert(@class, table);
 			generator.AddEmptyLine();
@@ -701,10 +688,6 @@ namespace AppBuilder
 
 			// Add Delete
 			generator.AddDelete(@class, table);
-
-			generator.EndBlock();
-
-			return generator.GetFormattedOutput();
 		}
 
 		private static bool HasForeignKeyTableFor(DbTable[] foreignKeyTables, ClrType type)
@@ -720,6 +703,20 @@ namespace AppBuilder
 			}
 
 			return false;
+		}
+
+		private static DbTable FindCollectionTable(DbSchema schema, ClrType collectionType)
+		{
+			var typeName = collectionType.Name;
+			foreach (var t in schema.Tables)
+			{
+				if (ClrType.GetUserCollectionTypeName(t.ClassName) == typeName)
+				{
+					return t;
+				}
+			}
+
+			return null;
 		}
 	}
 }
