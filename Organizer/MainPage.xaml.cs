@@ -2,22 +2,20 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Windows.UI.Popups;
-using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Data;
 using Windows.UI.Xaml.Input;
-
-// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=234238
 
 namespace Organizer
 {
 	/// <summary>
 	/// An empty page that can be used on its own or navigated to within a Frame.
 	/// </summary>
-	public sealed partial class MainPage : Page
+	public sealed partial class MainPage
 	{
 		private readonly PersonItemViewModel _viewModel = new PersonItemViewModel(new WinRtDialog());
 
@@ -25,6 +23,19 @@ namespace Organizer
 		{
 			this.InitializeComponent();
 			this.DataContext = _viewModel;
+		}
+
+		private async void UIElement_OnTapped(object sender, TappedRoutedEventArgs e)
+		{
+			var dialog = new MessageDialog(@"Confirmation from other thread. Working");
+			dialog.Commands.Add(new UICommand(@"Yes", _ =>
+													  {
+														  Debug.WriteLine(_.Id);
+														  Debug.WriteLine(_.Invoked);
+														  Debug.WriteLine(_.Id);
+													  }, true));
+			dialog.Commands.Add(new UICommand(@"No", null, false));
+			await dialog.ShowAsync();
 		}
 	}
 
@@ -105,33 +116,38 @@ namespace Organizer
 		#endregion Protected Methods
 	}
 
-	public sealed class iOsDialog
-	{
-		private EventHandler Accept;
-		private EventHandler Cancel;
+	//public sealed class WinDialog : DialogBase
+	//{
+	//	private readonly MessageDialog _dialog;
 
-		public string Message { get; set; }
+	//	public WinDialog(string message, Action acceptAction = null, Action declineAction = null)
+	//		: base(message, acceptAction, declineAction)
+	//	{
+	//		_dialog = new MessageDialog(message);
 
-		public void DisplayMessage(string message)
-		{
-			var dialog = this;
-			dialog.Message = message;
-			dialog.Accept += (sender, args) =>
-							 {
+	//		_dialog.Commands.Add(new UICommand(@"Yes", _ => this.AcceptAction()));
+	//		_dialog.Commands.Add(new UICommand(@"No", _ => this.DeclineAction()));
+	//		_dialog.Commands.Add(new UICommand(@"Cancel", _ => this.CancelAction()));
+	//	}
 
-							 };
-			dialog.Cancel += (sender, args) =>
-							 {
+	//	public override async Task ShowAsync()
+	//	{
+	//		await _dialog.ShowAsync();
+	//	}
+	//}
 
-							 };
-			dialog.Show();
-		}
+	//public sealed class OSxDialog : DialogBase
+	//{
+	//	public OSxDialog(string message, Action acceptAction = null, Action declineAction = null, Action cancelAction = null)
+	//		: base(message, acceptAction, declineAction, cancelAction)
+	//	{
+	//	}
 
-		private void Show()
-		{
-			throw new NotImplementedException();
-		}
-	}
+	//	public override Task ShowAsync()
+	//	{
+	//		return Task.FromResult(true);
+	//	}
+	//}
 
 	public sealed class WinRtDialog : IDialogInterface
 	{

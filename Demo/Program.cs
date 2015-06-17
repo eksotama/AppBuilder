@@ -1,66 +1,150 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Xml.Linq;
 using AppBuilder;
 using AppBuilder.Clr;
 using AppBuilder.Db.DDL;
 using MailReportUI;
 using OfficeOpenXml;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Information;
 using OfficeOpenXml.Style;
 
 namespace Demo
 {
 	public class Program
 	{
+		private static int _index = -1;
+		private static readonly object Sync = new object();
+
+		private static string GetEmail(string[] values)
+		{
+			lock (Sync)
+			{
+				_index++;
+				if (_index >= 0 && _index < values.Length)
+				{
+					return values[_index];
+				}
+				return null;
+			}
+		}
+
 		static void Main(string[] args)
 		{
 
 			try
 			{
+				var filename = @"C:\temp\cchbcMails.txt";
+
+				var hs = new HashSet<string>();
+				using (var sw = new StreamWriter(filename))
+				{
+					using (var fs = File.OpenRead(@"C:\temp\emails.txt"))
+					{
+						using (var sr = new StreamReader(fs))
+						{
+							string line;
+							while ((line = sr.ReadLine()) != null)
+							{
+								line = line.Trim();
+								if (line.IndexOf(@"cchellenic", StringComparison.OrdinalIgnoreCase) >= 0)
+								{
+									//sw.WriteLine(line);
+									hs.Add(line);
+								}
+							}
+						}
+					}
+					var copy = hs.ToArray();
+					Array.Sort(copy);
+					foreach (var value in copy)
+					{
+						sw.WriteLine(value);
+					}
+				}
+
 				var login = new WebLogin(@"O365.Reporting.SA@CCHellenic.onmicrosoft.com", @"Kafo7315");
-				var masterUrl = WebQuery.GetMailTrafficQuery(DateTime.Today);
+				//var masterUrl = WebQuery.GetMailTrafficQuery(DateTime.Today);
 
-				XDocument document;
-				var bufferFile = new FileInfo(@"C:\temp\raw.xml");
-				if (bufferFile.Exists)
+				var date = DateTime.Today;
+				var emails = File.ReadAllLines(filename).Skip(2317).Take(100).ToArray();
+
+				//emails = new[]
+				//		 {
+				//			 @"ivan.andonov@cchellenic.com",
+				//			 @"Petar.P.Petrov@cchellenic.com"
+				//		 };
+
+				var results = new ConcurrentQueue<ReportEntry>();
+
+				using (var ce = new CountdownEvent(Math.Min(32, emails.Length)))
 				{
-					// Load from the disk
-					document = XDocument.Load(bufferFile.FullName);
+					for (var i = 0; i < ce.InitialCount; i++)
+					{
+						ThreadPool.QueueUserWorkItem(_ =>
+													 {
+														 var e = _ as CountdownEvent;
+														 try
+														 {
+															 while (true)
+															 {
+																 var name = GetEmail(emails);
+																 if (name == null)
+																 {
+																	 break;
+																 }
+																 try
+																 {
+																	 var buffer = new byte[4 * 1024];
+																	 var inbound = ReportGenerator.ParseJson(WebQuery.DownloadContents(login, WebQuery.GetMessageTraceRecipientQuery(date, name), buffer));
+																	 var outbound = ReportGenerator.ParseJson(WebQuery.DownloadContents(login, WebQuery.GetMessageTraceSenderQuery(date, name), buffer));
+
+																	 results.Enqueue(new ReportEntry(name, inbound.Item1, inbound.Item2, outbound.Item1, outbound.Item2));
+																 }
+																 catch (Exception ex)
+																 {
+																	 Console.WriteLine(string.Format(@"Error with: {0} {1}", name, ex.Message));
+																 }
+															 }
+														 }
+														 catch (Exception ex)
+														 {
+															 Console.WriteLine(ex);
+														 }
+														 finally
+														 {
+															 e.Signal();
+														 }
+													 }, ce);
+					}
+					ce.Wait();
 				}
-				else
-				{
-					// Download Master Data XML
-					var masterDataXml = WebQuery.DownloadContentsAsync(login, masterUrl).Result;
 
-					// Load into memory				
-					document = XDocument.Parse(masterDataXml);
+				//// Parse the user entries
+				//var mailUserEntries = ReportGenerator.ParseMailUserEntries(document);
 
-					// Save to buffer file
-					document.Save(bufferFile.FullName);
-				}
+				//// Create report entries
+				//var reportEntries = ReportGenerator.CreateReportEntries(mailUserEntries);
 
-				// Parse the user entries
-				var mailUserEntries = ReportGenerator.ParseMailUserEntries(document);
+				//foreach (var reportEntry in reportEntries)
+				//{
+				//	var detailDataXml = WebQuery.DownloadContentsAsync(login, WebQuery.GetMessageTraceSenderQuery(DateTime.Today, reportEntry.Name)).Result;
 
-				// Create report entries
-				var reportEntries = ReportGenerator.CreateReportEntries(mailUserEntries);
+				//	Console.WriteLine(reportEntry.Name);
+				//	Console.WriteLine(reportEntry.Inbound);
+				//	Console.WriteLine(reportEntry.Outbound);
+				//	Console.WriteLine();
+				//}
 
-				foreach (var reportEntry in reportEntries)
-				{
-					var detailDataXml = WebQuery.DownloadContentsAsync(login, WebQuery.GetMessageTraceSenderQuery(DateTime.Today, reportEntry.Name)).Result;
-
-					Console.WriteLine(reportEntry.Name);
-					Console.WriteLine(reportEntry.Inbound);
-					Console.WriteLine(reportEntry.Outbound);
-					Console.WriteLine();
-				}
-
-				Console.WriteLine(mailUserEntries.Count);
-				Console.WriteLine(mailUserEntries.Select(e => e.Name.ToLowerInvariant()).Distinct().Count());
+				//Console.WriteLine(mailUserEntries.Count);
+				//Console.WriteLine(mailUserEntries.Select(e => e.Name.ToLowerInvariant()).Distinct().Count());
 
 				//foreach (var entry in entries)
 				//{

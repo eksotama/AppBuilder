@@ -15,10 +15,6 @@
     <Grid Margin="50">
         <Border BorderBrush="DarkRed" BorderThickness=".5">
             <StackPanel Orientation="Vertical" Background="DarkOrange" Opacity="0.75" >
-                <!--Url-->
-                <TextBlock Margin="10,10,10,0" FontFamily="Segoe UI" FontSize="20" FontWeight="Bold">Service Url</TextBlock>
-                <TextBox x:Name="TbUrl" Margin="10,0,10,0" Padding="3" Text="{Binding Settings.Url, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
-
                 <!--Username-->
                 <TextBlock Margin="10,10,10,0" FontFamily="Segoe UI" FontSize="20" FontWeight="Bold">Username</TextBlock>
                 <TextBox x:Name="TbName" Margin="10,0,10,0" Padding="3" Text="{Binding Settings.Username, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBox>
@@ -32,12 +28,17 @@
                         Command="{Binding GenerateReportCommand}"
                         CommandParameter="{Binding Settings}">Generate Report</Button>
 
-                <TextBlock Margin="10,10,10,0" FontFamily="Segoe UI" FontSize="16"
-                           Text="{Binding ProgressStep}"
-                           Visibility="{Binding IsBusy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBlock>
+                <Grid Margin="10,10,10,0" Height="25">
+                    <ProgressBar Minimum="{Binding MinValue}" Maximum="{Binding MaxValue}" Value="{Binding CurrentValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                 Visibility="{Binding IsBusy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></ProgressBar>
+                    <TextBlock Text="{Binding CurrentValuePercent}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding IsBusy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                               />
+                </Grid>
 
-                <ProgressBar Margin="10,10,10,0" Height="25" IsIndeterminate="True"
-                             Visibility="{Binding IsBusy, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></ProgressBar>
+                <TextBlock Margin="10,10,10,0" FontFamily="Segoe UI" FontSize="16" Text="{Binding ProgressStep, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBlock>
+                <TextBlock Margin="10,10,10,0" FontFamily="Segoe UI" FontSize="16" Text="{Binding ElapsedTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"></TextBlock>
+
             </StackPanel>
         </Border>
     </Grid>

@@ -15,5 +15,23 @@ namespace Architecture.Validation
 		{
 			return string.IsNullOrWhiteSpace(value) ? new ValidationResult(message) : ValidationResult.Success;
 		}
+
+		public static ValidationResult[] GetResults(ValidationResult[] results)
+		{
+			if (results == null) throw new ArgumentNullException("results");
+			if (results.Length == 0) throw new ArgumentOutOfRangeException("results");
+
+			throw new NotImplementedException();
+		}
+
+		public static ValidationResult ValidateLength(string username, int max)
+		{
+			throw new NotImplementedException();
+		}
+
+		public static ValidationResult ValidateLength(string input, int min, int max)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

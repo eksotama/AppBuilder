@@ -29,6 +29,7 @@
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
+                    <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="*"></RowDefinition>
                 </Grid.RowDefinitions>
 
@@ -47,7 +48,8 @@
                     </TextBox.HeaderTemplate>
                 </TextBox>
                 <Button Grid.Row="2" Margin="10" HorizontalAlignment="Right" Command="{Binding AddCommand}" CommandParameter="{Binding NewItem}" IsEnabled="{Binding IsIdle}" Foreground="#1A2026">Add item</Button>
-                <ListView x:Name="LvItems" Grid.Row="3" Margin="10" ItemsSource="{Binding Items}" IsEnabled="{Binding IsIdle}">
+                <Button Grid.Row="3" Margin="10" HorizontalAlignment="Right" Tapped="UIElement_OnTapped" IsEnabled="{Binding IsIdle}" Foreground="#1A2026">Show confirmation in other thread</Button>
+                <ListView x:Name="LvItems" Grid.Row="4" Margin="10" ItemsSource="{Binding Items}" IsEnabled="{Binding IsIdle}">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />

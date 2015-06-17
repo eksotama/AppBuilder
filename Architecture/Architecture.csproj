@@ -35,8 +35,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Dialog\IDialog.cs" />
-    <Compile Include="Dialog\ConfirmationResult.cs" />
+    <Compile Include="Dialog\DialogBase.cs" />
     <Compile Include="Objects\ObjectEventArgs.cs" />
     <Compile Include="Objects\ViewObject.cs" />
     <Compile Include="Class1.cs" />

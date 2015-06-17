@@ -65,7 +65,6 @@
   <ItemGroup>
     <Compile Include="GitHub.cs" />
     <Compile Include="iFsa.cs" />
-    <Compile Include="MailApp.cs" />
     <Compile Include="Organizer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

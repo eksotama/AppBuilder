@@ -1,116 +1,20 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Architecture.Data;
 using Architecture.Dialog;
-using Architecture.Helpers;
 using Architecture.Objects;
 using Architecture.Validation;
 
+
+
 namespace Demo
 {
-	//
-	// Read Only scenario
-	//
-	public sealed class Brand : IReadOnlyObject
-	{
-		public long Id { get; private set; }
-		public string Name { get; private set; }
-
-		public Brand(long id, string name)
-		{
-			this.Id = id;
-			this.Name = name;
-		}
-	}
-
-	public sealed class BrandAdapter : IReadOnlyAdapter<Brand>
-	{
-		public void Fill(Dictionary<long, Brand> items)
-		{
-			if (items == null) throw new ArgumentNullException("items");
-
-			// SQL easy with my tool
-			throw new NotImplementedException();
-		}
-	}
-
-	public sealed class BrandHelper : Helper<Brand>
-	{
-	}
-
-
-
-	public sealed class Article : IReadOnlyObject
-	{
-		public long Id { get; private set; }
-		public string Name { get; private set; }
-		public Brand Brand { get; private set; }
-
-		public Article(long id, string name, Brand brand)
-		{
-			this.Id = id;
-			this.Name = name;
-			this.Brand = brand;
-		}
-	}
-
-	public sealed class ArticleAdapter : IReadOnlyAdapter<Article>
-	{
-		private readonly Dictionary<long, Brand> _brands;
-
-		public ArticleAdapter(Dictionary<long, Brand> brands)
-		{
-			if (brands == null) throw new ArgumentNullException("brands");
-
-			_brands = brands;
-		}
-
-		public void Fill(Dictionary<long, Article> items)
-		{
-			if (items == null) throw new ArgumentNullException("items");
-
-			// SQL : Easy with the tool
-			throw new NotImplementedException();
-		}
-	}
-
-	public sealed class ArticleHelper : Helper<Article>
-	{
-	}
-
-
-	//
-	// Read Only scenario with dependencies
-	//
-	public static class Code
-	{
-		public static async void Run()
-		{
-			var bh = new BrandHelper();
-			var ah = new ArticleHelper();
-
-			bh.Load(new BrandAdapter());
-			ah.Load(new ArticleAdapter(bh.Items));
-
-			//var m = new LogMessageManager(new LogMessageAdapter(), new LogMessageValidator(), new LogMessageSettings());
-			//m.Load(DateTime.Today);
-
-			var item = default(LogMessage);
-			var dialog = default(IDialog);
-			//var results = await m.InsertAsync(item, dialog);
-
-			var viewManager = new LogMessageViewManager(new LogMessageManager(new LogMessageAdapter()), new LogMessageSettings());
-
-
-		}
-	}
-
 	public abstract class BindableBase : INotifyPropertyChanged
 	{
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -130,103 +34,195 @@ namespace Demo
 		}
 	}
 
-
-
 	public sealed class LogMessageViewManager : BindableBase
 	{
-		// For the logic !!!
-		public LogMessageManager Manager { get; private set; }
-		public LogMessageSettings Settings { get; private set; }
-		public ObservableCollection<LogMessageViewItem> ViewItems { get; private set; }
+		public LoginManager Manager { get; private set; }
 
-		public LogMessageViewManager(LogMessageManager manager, LogMessageSettings settings)
+		public ObservableCollection<LoginViewItem> ViewItems { get; private set; }
+
+		public LogMessageViewManager(LoginManager manager)
 		{
 			if (manager == null) throw new ArgumentNullException("manager");
-			if (settings == null) throw new ArgumentNullException("settings");
 
 			this.Manager = manager;
-			this.Settings = settings;
-			this.ViewItems = new ObservableCollection<LogMessageViewItem>();
+			this.ViewItems = new ObservableCollection<LoginViewItem>();
 		}
 
 		public void Load(DateTime date)
 		{
+			this.Manager.Load(date);
+
 			this.ViewItems.Clear();
-			foreach (var item in this.Manager.GetAll(date))
+			foreach (var item in this.Manager.Logins)
 			{
-				this.ViewItems.Add(new LogMessageViewItem(item));
+				this.ViewItems.Add(new LoginViewItem(item));
 			}
 
 			// TODO : Sort & Filter
 		}
 
-		public async Task AddNew(LogMessageViewItem viewItem, IDialog dialog)
+		public async Task AddNew(LoginViewItem viewItem, DialogBase dialog)
 		{
 			if (viewItem == null) throw new ArgumentNullException("viewItem");
 			if (dialog == null) throw new ArgumentNullException("dialog");
 
-			// Check Contents
-			var validationResult = Validator.ValidateNotEmpty(viewItem.Content, @"Contents cannot be empty");
-			if (validationResult != ValidationResult.Success)
-			{
-				await dialog.DisplayAsync(this.Settings.ItemAlreadyHandledMsg);
-				return;
-			}
-
-			// Call the manager to add the new message
-			this.Manager.AddNew(viewItem.LogMessage);
-
-			// Add the item to the list to the right place if sorter != null
-			this.ViewItems.Add(viewItem);
+			// Apply validations about required fields, ranges & values
+			var validationResult = this.Manager.Validate(viewItem.Login);
+			//if (validationResult == ValidationResult.Success)
+			//{
+			//	// Apply business logic
+			//	var status = this.Manager.CanAddNew(viewItem.Login).Status;
+			//	switch (status)
+			//	{
+			//		case PermissionStatus.Allow:
+			//			// Add the log message
+			//			this.Add(viewItem);
+			//			break;
+			//		case PermissionStatus.Confirm:
+			//			// Confirm any user warnings
+			//			dialog.Message = this.Manager.Settings.ConfirmAddLongMessageMsg;
+			//			dialog.AcceptAction = () => this.Add(viewItem);
+			//			await dialog.ShowAsync();
+			//			break;
+			//		default:
+			//			throw new ArgumentOutOfRangeException();
+			//	}
+			//}
 		}
 
-		public async Task MarkHandled(LogMessageViewItem viewItem, IDialog dialog)
+		public async Task MarkHandled(LoginViewItem viewItem, DialogBase dialog)
 		{
 			if (viewItem == null) throw new ArgumentNullException("viewItem");
 			if (dialog == null) throw new ArgumentNullException("dialog");
 
 			// Check if the item isn't already handled
-			var isAlreadyHandled = viewItem.IsHandled;
-			if (isAlreadyHandled)
+			//var isAlreadyHandled = viewItem.IsHandled;
+			//if (isAlreadyHandled)
+			//{
+			//	await dialog.DisplayAsync(this.Manager.Settings.ItemAlreadyHandledMsg);
+			//	return;
+			//}
+
+			//// Check if we have other message which is critical and it isn't handled
+			//var hasUnhandledCriticalMessage = this.Manager.HasUnhandledCriticalMessage(this.ViewItems.Select(v => v.Login), viewItem.Login);
+			//if (hasUnhandledCriticalMessage)
+			//{
+			//	await dialog.DisplayAsync(this.Manager.Settings.HasOtherUnhandledCriticalMessage);
+			//	return;
+			//}
+
+			//// Request confirmation for marking the item as handled
+			//dialog.Message = this.Manager.Settings.ConfirmMarkHandledMsg;
+			//dialog.AcceptAction = () =>
+			//					  {
+			//						  // Mark the viewItem as Handled
+			//						  viewItem.IsHandled = true;
+
+			//						  // Call the manager to update the message
+			//						  this.Manager.MarkHandled(viewItem.Login);
+			//					  };
+			//await dialog.ShowAsync();
+
+		}
+
+		private void Add(LoginViewItem viewItem)
+		{
+			// Call the manager to add the new message
+			if (this.Manager.AddNew(viewItem.Login))
 			{
-				await dialog.DisplayAsync(this.Settings.ItemAlreadyHandledMsg);
-				return;
+				// Add the item to the list to the right place if sorter != null
+				this.ViewItems.Add(viewItem);
 			}
-
-			// Check if we have other message which is critical and it isn't handled
-			var messages = this.ViewItems.Select(v => v.LogMessage);
-			var currentMessage = viewItem.LogMessage;
-			var hasUnhandledCriticalMessage = this.Manager.HasUnhandledCriticalMessage(messages, currentMessage);
-			if (hasUnhandledCriticalMessage)
-			{
-				await dialog.DisplayAsync(this.Settings.HasOtherUnhandledCriticalMessage);
-				return;
-			}
-
-			// Request confirmation for marking the item as handled
-			var confirmation = await dialog.ConfirmAsync(this.Settings.ConfirmMarkHandledMsg);
-			if (confirmation != ConfirmationResult.Accept) return;
-
-			// Mark the viewItem as Handled
-			viewItem.IsHandled = true;
-
-			// Call the manager to update the message
-			this.Manager.MarkHandled(currentMessage);
 		}
 	}
 
-	public sealed class LogMessageManager
+	public sealed class LoginManager
 	{
-		public LogMessageAdapter Adapter { get; private set; }
+		private readonly List<Login> _logins = new List<Login>();
 
-		public LogMessageManager(LogMessageAdapter adapter)
+		public LoginAdapter Adapter { get; private set; }
+		public LoginSettings Settings { get; private set; }
+
+		public List<Login> Logins
 		{
-			if (adapter == null) throw new ArgumentNullException("adapter");
-
-			this.Adapter = adapter;
+			get { return _logins; }
 		}
 
-		public bool HasUnhandledCriticalMessage(IEnumerable<LogMessage> messages, LogMessage excludeMessage)
+		public LoginManager(LoginAdapter adapter, LoginSettings settings)
+		{
+			if (adapter == null) throw new ArgumentNullException("adapter");
+			if (settings == null) throw new ArgumentNullException("settings");
+
+			this.Adapter = adapter;
+			this.Settings = settings;
+		}
+
+		public void Load(DateTime date)
+		{
+			_logins.Clear();
+			_logins.AddRange(this.Adapter.GetAll(date));
+		}
+
+		public ValidationResult[] Validate(Login login)
+		{
+			if (login == null) throw new ArgumentNullException("login");
+
+			return Validator.GetResults(new[]
+			                            {
+				                            Validator.ValidateNotEmpty(login.Username, this.Settings.UsernameRequiredMsg),
+				                            Validator.ValidateNotEmpty(login.Password, this.Settings.PasswordRequiredMsg),
+											Validator.ValidateLength(login.Username, max:16),
+				                            Validator.ValidateLength(login.Password, min:8, max:32),
+			                            });
+		}
+
+		public PermissionResult CanAddNew(Login login)
+		{
+			if (login == null) throw new ArgumentNullException("login");
+
+			// Trim the username
+			var username = (login.Username ?? string.Empty).Trim();
+
+			// Check for system usernames collision
+			foreach (var name in this.Settings.SystemUsernames)
+			{
+				if (name.Equals(username, StringComparison.OrdinalIgnoreCase))
+				{
+					return PermissionResult.Deny(this.Settings.UsernameIsReservedForInternalUseMsg);
+				}
+			}
+
+			// Check for duplicate username
+			foreach (var current in _logins)
+			{
+				if (current.Username.Equals(username, StringComparison.OrdinalIgnoreCase))
+				{
+					return PermissionResult.Deny(this.Settings.UsernameAlreadyTakenMsg);
+				}
+			}
+
+			var strenght = this.GetPasswordStrenght(login.Password);
+			switch (strenght)
+			{
+				case PasswordStrenght.Weak:
+					return PermissionResult.Deny(this.Settings.UsernameAlreadyTakenMsg);
+				case PasswordStrenght.Fair:
+					return PermissionResult.Confirm(this.Settings.UsernameAlreadyTakenMsg);
+				case PasswordStrenght.Good:
+				case PasswordStrenght.Strong:
+					return PermissionResult.Allow;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+
+		private PasswordStrenght GetPasswordStrenght(string password)
+		{
+			throw new NotImplementedException();
+		}
+
+		public bool HasUnhandledCriticalMessage(IEnumerable<Login> messages, Login excludeMessage)
 		{
 			if (messages == null) throw new ArgumentNullException("messages");
 			if (excludeMessage == null) throw new ArgumentNullException("excludeMessage");
@@ -239,129 +235,170 @@ namespace Demo
 				}
 				if (this.IsUnhandledCriticalItem(message))
 				{
-					return false;
+					return true;
 				}
 			}
 
-			return true;
+			return false;
 		}
 
-		public bool IsUnhandledCriticalItem(LogMessage logMessage)
+		public bool IsUnhandledCriticalItem(Login login)
 		{
-			if (logMessage == null) throw new ArgumentNullException("logMessage");
+			if (login == null) throw new ArgumentNullException("login");
 
-			return !logMessage.IsHandled && logMessage.Content.IndexOf(@"Critical", StringComparison.OrdinalIgnoreCase) >= 0;
+			//return !login.IsHandled && login.Username.IndexOf(@"Critical", StringComparison.OrdinalIgnoreCase) >= 0;
+			return false;
 		}
 
-		public List<LogMessage> GetAll(DateTime date)
+		public bool AddNew(Login login, bool confirmed = false)
 		{
-			return this.Adapter.GetAll(date);
+			if (login == null) throw new ArgumentNullException("login");
+
+			//var validationResult = this.Validate(login);
+			//if (validationResult == ValidationResult.Success)
+			//{
+			//	var permissionResult = this.CanAddNew(login);
+
+			//	if (permissionResult.Status == PermissionStatus.Allow ||
+			//		(permissionResult.Status == PermissionStatus.Confirm && confirmed))
+			//	{
+			//		// Add the item to the db
+			//		this.Adapter.Insert(login);
+			//	}
+			//}
+
+			return false;
 		}
 
-		public void AddNew(LogMessage logMessage)
+		public void MarkHandled(Login login)
 		{
-			if (logMessage == null) throw new ArgumentNullException("logMessage");
+			if (login == null) throw new ArgumentNullException("login");
 
-			// Add the item to the db
-			this.Adapter.Insert(logMessage);
+			// Check if the item isn't already handled
+			//if (login.IsHandled)
+			//{
+			//	return;
+			//}
+			//// Check if we have other message which is critical and it isn't handled
+			//var hasUnhandledCriticalMessage = this.HasUnhandledCriticalMessage(_logins, login);
+			//if (hasUnhandledCriticalMessage)
+			//{
+			//	return;
+			//}
+
+			//// Mask the message as handled
+			//login.IsHandled = true;
+
+			//// Update the message in the db
+			//this.Adapter.Update(login);
 		}
-
-		public void MarkHandled(LogMessage logMessage)
-		{
-			if (logMessage == null) throw new ArgumentNullException("logMessage");
-
-			// Mask the message as handled
-			logMessage.IsHandled = true;
-
-			// Update the message in the db
-			this.Adapter.Update(logMessage);
-		}
-
-
 	}
 
-	public sealed class LogMessageViewItem : BindableBase
+	public enum PasswordStrenght
 	{
-		private readonly LogMessage _logMessage;
+		Weak,
+		Fair,
+		Good,
+		Strong
+	}
 
-		public LogMessage LogMessage
+	public sealed class LoginViewItem : BindableBase
+	{
+		private readonly Login _login;
+
+		public Login Login
 		{
-			get { return _logMessage; }
+			get { return _login; }
 		}
 
-		public string Content
+		public string Username
 		{
-			get { return LogMessage.Content; }
+			get { return this.Login.Username; }
 			set
 			{
-				LogMessage.Content = value;
+				this.Login.Username = value;
 				this.OnPropertyChanged();
 			}
 		}
 
-		public bool IsHandled
+		public string Password
 		{
-			get { return LogMessage.IsHandled; }
+			get { return this.Login.Password; }
 			set
 			{
-				LogMessage.IsHandled = value;
+				this.Login.Password = value;
 				this.OnPropertyChanged();
 			}
 		}
 
-		public LogMessageViewItem(LogMessage logMessage)
+		public bool IsActive
 		{
-			if (logMessage == null) throw new ArgumentNullException("logMessage");
+			get { return this.Login.IsActive; }
+			set
+			{
+				this.Login.IsActive = value;
+				this.OnPropertyChanged();
+			}
+		}
 
-			_logMessage = logMessage;
+		public LoginViewItem(Login login)
+		{
+			if (login == null) throw new ArgumentNullException("login");
+
+			_login = login;
 		}
 	}
 
-	public sealed class LogMessageSettings
+	public sealed class LoginSettings
 	{
-		public string CannotDeleteCriticalMsg { get; private set; }
-		public string HasOtherUnhandledCriticalMessage { get; private set; }
-		public string MaximumLimitExceededMsg { get; private set; }
-		public int MaxItems { get; private set; }
-		public string ConfirmDeleteMsg { get; private set; }
-		public string ConfirmMarkHandledMsg { get; private set; }
-		public string ItemAlreadyHandledMsg { get; private set; }
+		public string UsernameRequiredMsg { get; set; }
+		public string PasswordRequiredMsg { get; set; }
+		public string[] SystemUsernames { get; private set; }
+		public string UsernameIsReservedForInternalUseMsg { get; set; }
+		public string UsernameAlreadyTakenMsg { get; set; }
+
+		public LoginSettings()
+		{
+			this.UsernameRequiredMsg = @"";
+			this.PasswordRequiredMsg = @"";
+			this.SystemUsernames = new[] { @"admin", @"administrator", @"system" };
+		}
 	}
 
-	public sealed class LogMessageAdapter : IModifiableAdapter<LogMessage>
+	public sealed class LoginAdapter : IModifiableAdapter<Login>
 	{
-		public List<LogMessage> GetAll(DateTime date)
+		public List<Login> GetAll(DateTime date)
 		{
 			throw new NotImplementedException();
 		}
 
-		public void Insert(LogMessage item)
+		public void Insert(Login item)
 		{
 			throw new NotImplementedException();
 		}
 
-		public void Update(LogMessage item)
+		public void Update(Login item)
 		{
 			throw new NotImplementedException();
 		}
 
-		public void Delete(LogMessage item)
+		public void Delete(Login item)
 		{
 			throw new NotImplementedException();
 		}
 	}
 
-	public sealed class LogMessage : IModifiableObject
+	public sealed class Login : IModifiableObject
 	{
 		public long Id { get; set; }
-		public string Content { get; set; }
-		public bool IsHandled { get; set; }
+		public string Username { get; set; }
+		public string Password { get; set; }
+		public bool IsActive { get; set; }
 
-		public LogMessage(long id, string content, bool isHandled)
+		public Login()
 		{
-			this.Id = id;
-			this.Content = content;
-			this.IsHandled = isHandled;
+			this.Username = string.Empty;
+			this.Password = string.Empty;
 		}
 	}
 }

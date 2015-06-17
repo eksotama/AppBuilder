@@ -54,8 +54,12 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ReportEntry.cs" />
+    <Compile Include="ReportGenerator.cs" />
     <Compile Include="ReportGeneratorViewModel.cs" />
     <Compile Include="ReportSettings.cs" />
+    <Compile Include="WebLogin.cs" />
+    <Compile Include="WebQuery.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -100,7 +104,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="CchbcMails.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\orange1.jpg" />
     <Resource Include="Images\orange2.jpg" />
