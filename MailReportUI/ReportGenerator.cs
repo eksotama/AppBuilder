@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Xml.Linq;
 
 namespace MailReportUI
@@ -21,24 +22,82 @@ namespace MailReportUI
 		private static readonly string StartJsonFlag = @"""Size"":";
 		private static readonly string EndJsonFlag = @"}";
 
-		public static Tuple<int, int> ParseXml(string contents)
+		public static Tuple<List<MsgTraceEntry>, string> Parse(string contents)
+		{
+			var entries = new List<MsgTraceEntry>();
+			var nextUrl = string.Empty;
+
+			var senderAddressName = @"""SenderAddress"":";
+			var recipientAddressName = @"""RecipientAddress"":";
+			var sizeName = @"""Size"":";
+			var pageName = @"}],""__next"":""";
+
+			var senderFlagLength = senderAddressName.Length + 1;
+			var recipientFlagLength = recipientAddressName.Length + 1;
+			var sizeFlagLength = sizeName.Length + 1;
+			var metaDataLength = 239;
+
+			var offset = 0;
+			while (offset < contents.Length)
+			{
+				var entry = new MsgTraceEntry();
+
+				var startIndex = contents.IndexOf(senderAddressName, offset, StringComparison.Ordinal);
+				if (startIndex < 0)
+				{
+					break;
+				}
+
+				startIndex += senderFlagLength;
+				var endIndex = contents.IndexOf(',', startIndex);
+				entry.Sender = contents.Substring(startIndex, endIndex - startIndex - 1);
+
+				startIndex = endIndex + recipientFlagLength;
+				endIndex = contents.IndexOf(',', startIndex);
+				startIndex++;
+				entry.Recipient = contents.Substring(startIndex, endIndex - startIndex - 1);
+
+				startIndex = endIndex + sizeFlagLength;
+				endIndex = contents.IndexOf('}', startIndex);
+				entry.Size = long.Parse(contents.Substring(startIndex, endIndex - startIndex));
+
+				entries.Add(entry);
+
+				if (entries.Count == 2000)
+				{
+					startIndex = contents.IndexOf(pageName, endIndex, StringComparison.Ordinal);
+					if (startIndex >= 0)
+					{
+						startIndex += pageName.Length;
+						nextUrl = contents.Substring(startIndex, contents.IndexOf('"', startIndex) - startIndex) + @"&$format=json";
+					}
+					endIndex = contents.Length;
+				}
+
+				offset = endIndex + metaDataLength;
+			}
+
+			return Tuple.Create(entries, nextUrl);
+		}
+
+		public static Tuple<long, long> ParseXml(string contents)
 		{
 			if (contents == null) throw new ArgumentNullException("contents");
 
 			return Parse(contents, StartXmlFlag, EndXmlFlag);
 		}
 
-		public static Tuple<int, int> ParseJson(string contents)
+		public static Tuple<long, long> ParseJson(string contents)
 		{
 			if (contents == null) throw new ArgumentNullException("contents");
 
 			return Parse(contents, StartJsonFlag, EndJsonFlag);
 		}
 
-		private static Tuple<int, int> Parse(string contents, string startFlag, string endFlag)
+		private static Tuple<long, long> Parse(string contents, string startFlag, string endFlag)
 		{
-			var count = 0;
-			var size = 0;
+			var count = 0L;
+			var size = 0L;
 
 			var offset = 0;
 
@@ -53,7 +112,7 @@ namespace MailReportUI
 
 				var end = contents.IndexOf(endFlag, start, StringComparison.OrdinalIgnoreCase);
 
-				size += int.Parse(contents.Substring(start, end - start));
+				size += long.Parse(contents.Substring(start, end - start));
 				count++;
 
 				offset = end;

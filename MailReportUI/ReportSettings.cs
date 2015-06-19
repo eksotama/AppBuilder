@@ -1,8 +1,17 @@
+using System;
+
 namespace MailReportUI
 {
 	public sealed class ReportSettings : BindableObject
 	{
-		private string _username = string.Empty;
+		private DateTime _date = DateTime.Today;
+		public DateTime Date
+		{
+			get { return _date; }
+			set { this.SetField(ref _date, value); }
+		}
+
+		private string _username = @"O365.Reporting.SA@CCHellenic.onmicrosoft.com";
 		public string Username
 		{
 			get { return _username; }

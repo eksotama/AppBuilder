@@ -105,11 +105,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="CchbcMails.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\orange1.jpg" />
     <Resource Include="Images\orange2.jpg" />
     <Resource Include="Images\orange3.jpg" />

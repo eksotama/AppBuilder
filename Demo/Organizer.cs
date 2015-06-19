@@ -171,8 +171,9 @@ namespace Demo
 			                            {
 				                            Validator.ValidateNotEmpty(login.Username, this.Settings.UsernameRequiredMsg),
 				                            Validator.ValidateNotEmpty(login.Password, this.Settings.PasswordRequiredMsg),
-											Validator.ValidateLength(login.Username, max:16),
-				                            Validator.ValidateLength(login.Password, min:8, max:32),
+											Validator.ValidateMaxLength(login.Username, 16, this.Settings.UsernameTooLongMsg),
+											Validator.ValidateMinLength(login.Password, 8, this.Settings.PasswordTooShortMsg),
+				                            Validator.ValidateMaxLength(login.Password, 32, this.Settings.PasswordTooLongMsg),
 			                            });
 		}
 
@@ -215,7 +216,6 @@ namespace Demo
 					throw new ArgumentOutOfRangeException();
 			}
 		}
-
 
 		private PasswordStrenght GetPasswordStrenght(string password)
 		{
@@ -356,6 +356,9 @@ namespace Demo
 		public string[] SystemUsernames { get; private set; }
 		public string UsernameIsReservedForInternalUseMsg { get; set; }
 		public string UsernameAlreadyTakenMsg { get; set; }
+		public string UsernameTooLongMsg { get; set; }
+		public string PasswordTooShortMsg { get; set; }
+		public string PasswordTooLongMsg { get; set; }
 
 		public LoginSettings()
 		{

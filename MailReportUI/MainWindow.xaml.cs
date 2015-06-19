@@ -21,6 +21,11 @@ namespace MailReportUI
 			this.DataContext = this.ViewModel;
 		}
 
+		private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+		{
+			this.PbPassword.Password = @"Kafo7315";
+		}
+
 		private void PbPassword_OnPasswordChanged(object sender, RoutedEventArgs e)
 		{
 			this.ViewModel.PasswordChanged((sender as PasswordBox).Password);

@@ -38,43 +38,105 @@ namespace Demo
 
 		static void Main(string[] args)
 		{
-
 			try
 			{
-				var filename = @"C:\temp\cchbcMails.txt";
+				//var filename = @"C:\temp\cchbcMails.txt";
 
-				var hs = new HashSet<string>();
-				using (var sw = new StreamWriter(filename))
-				{
-					using (var fs = File.OpenRead(@"C:\temp\emails.txt"))
-					{
-						using (var sr = new StreamReader(fs))
-						{
-							string line;
-							while ((line = sr.ReadLine()) != null)
-							{
-								line = line.Trim();
-								if (line.IndexOf(@"cchellenic", StringComparison.OrdinalIgnoreCase) >= 0)
-								{
-									//sw.WriteLine(line);
-									hs.Add(line);
-								}
-							}
-						}
-					}
-					var copy = hs.ToArray();
-					Array.Sort(copy);
-					foreach (var value in copy)
-					{
-						sw.WriteLine(value);
-					}
-				}
+				//var hs = new HashSet<string>();
+				//using (var sw = new StreamWriter(filename))
+				//{
+				//	using (var fs = File.OpenRead(@"C:\temp\emails.txt"))
+				//	{
+				//		using (var sr = new StreamReader(fs))
+				//		{
+				//			string line;
+				//			while ((line = sr.ReadLine()) != null)
+				//			{
+				//				line = line.Trim();
+				//				if (line.IndexOf(@"cchellenic", StringComparison.OrdinalIgnoreCase) >= 0)
+				//				{
+				//					//sw.WriteLine(line);
+				//					hs.Add(line);
+				//				}
+				//			}
+				//		}
+				//	}
+				//	var copy = hs.ToArray();
+				//	Array.Sort(copy);
+				//	foreach (var value in copy)
+				//	{
+				//		sw.WriteLine(value);
+				//	}
+				//}
 
-				var login = new WebLogin(@"O365.Reporting.SA@CCHellenic.onmicrosoft.com", @"Kafo7315");
-				//var masterUrl = WebQuery.GetMailTrafficQuery(DateTime.Today);
+				//var f = new FileInfo(@"C:\temp\input.json");
 
-				var date = DateTime.Today;
-				var emails = File.ReadAllLines(filename).Skip(2317).Take(100).ToArray();
+				//var contents = File.ReadAllText(f.FullName);
+
+				//var s = Stopwatch.StartNew();
+				//var entries = ReportGenerator.Parse(contents);
+				//s.Stop();
+				//Console.WriteLine(s.ElapsedMilliseconds);
+				//Console.WriteLine(entries.Count);
+				//foreach (var entry in entries)
+				//{
+				//	Console.WriteLine(entry);
+				//}
+
+				//foreach (var range in WebQuery.GetDayRanges())
+				//{
+
+				//}
+
+
+				//var reportEntries = new Dictionary<string, ReportEntry>(1024);
+
+				//var buffer = new byte[4 * 1024];
+				//var login = new WebLogin(@"O365.Reporting.SA@CCHellenic.onmicrosoft.com", @"Kafo7315");
+				//var startTime = DateTime.Today;
+				//var limitTime = startTime.AddDays(1);
+				//while (startTime < limitTime)
+				//{
+				//	Console.WriteLine(startTime);
+				//	var endTime = startTime.AddMinutes(1);
+				//	var url = WebQuery.GetQueryUrl(startTime, endTime);
+				//	var contents = WebQuery.DownloadContents(login, url, buffer);
+				//	var entries = ReportGenerator.Parse(contents);
+
+				//	foreach (var entry in entries)
+				//	{
+				//		ReportEntry reportEntry;
+
+				//		var name = entry.Sender;
+				//		if (name.IndexOf(@"cchellenic.com", StringComparison.Ordinal) >= 0)
+				//		{
+				//			if (!reportEntries.TryGetValue(name, out reportEntry))
+				//			{
+				//				reportEntry = new ReportEntry(name);
+				//				reportEntries.Add(name, reportEntry);
+				//			}
+				//			reportEntry.Outbound++;
+				//			reportEntry.OutboundSize += entry.Size;
+				//		}
+				//		name = entry.Recipient;
+				//		if (name.IndexOf(@"cchellenic.com", StringComparison.Ordinal) >= 0)
+				//		{
+				//			if (!reportEntries.TryGetValue(name, out reportEntry))
+				//			{
+				//				reportEntry = new ReportEntry(name);
+				//				reportEntries.Add(name, reportEntry);
+				//			}
+				//			reportEntry.Inbound++;
+				//			reportEntry.InboundSize += entry.Size;
+				//		}
+				//	}
+
+				//	Console.WriteLine(entries.Count);
+				//	File.WriteAllText(f.FullName, contents);
+				//	startTime = endTime;
+				//}
+
+				//var emails = File.ReadAllLines(filename).Skip(2317).Take(100).ToArray();
 
 				//emails = new[]
 				//		 {
@@ -82,50 +144,50 @@ namespace Demo
 				//			 @"Petar.P.Petrov@cchellenic.com"
 				//		 };
 
-				var results = new ConcurrentQueue<ReportEntry>();
+				//var results = new ConcurrentQueue<ReportEntry>();
 
-				using (var ce = new CountdownEvent(Math.Min(32, emails.Length)))
-				{
-					for (var i = 0; i < ce.InitialCount; i++)
-					{
-						ThreadPool.QueueUserWorkItem(_ =>
-													 {
-														 var e = _ as CountdownEvent;
-														 try
-														 {
-															 while (true)
-															 {
-																 var name = GetEmail(emails);
-																 if (name == null)
-																 {
-																	 break;
-																 }
-																 try
-																 {
-																	 var buffer = new byte[4 * 1024];
-																	 var inbound = ReportGenerator.ParseJson(WebQuery.DownloadContents(login, WebQuery.GetMessageTraceRecipientQuery(date, name), buffer));
-																	 var outbound = ReportGenerator.ParseJson(WebQuery.DownloadContents(login, WebQuery.GetMessageTraceSenderQuery(date, name), buffer));
+				//using (var ce = new CountdownEvent(Math.Min(32, emails.Length)))
+				//{
+				//	for (var i = 0; i < ce.InitialCount; i++)
+				//	{
+				//		ThreadPool.QueueUserWorkItem(_ =>
+				//									 {
+				//										 var e = _ as CountdownEvent;
+				//										 try
+				//										 {
+				//											 while (true)
+				//											 {
+				//												 var name = GetEmail(emails);
+				//												 if (name == null)
+				//												 {
+				//													 break;
+				//												 }
+				//												 try
+				//												 {
+				//													 var buffer = new byte[4 * 1024];
+				//													 var inbound = ReportGenerator.ParseJson(WebQuery.DownloadContents(login, WebQuery.GetMessageTraceRecipientQuery(date, name), buffer));
+				//													 var outbound = ReportGenerator.ParseJson(WebQuery.DownloadContents(login, WebQuery.GetMessageTraceSenderQuery(date, name), buffer));
 
-																	 results.Enqueue(new ReportEntry(name, inbound.Item1, inbound.Item2, outbound.Item1, outbound.Item2));
-																 }
-																 catch (Exception ex)
-																 {
-																	 Console.WriteLine(string.Format(@"Error with: {0} {1}", name, ex.Message));
-																 }
-															 }
-														 }
-														 catch (Exception ex)
-														 {
-															 Console.WriteLine(ex);
-														 }
-														 finally
-														 {
-															 e.Signal();
-														 }
-													 }, ce);
-					}
-					ce.Wait();
-				}
+				//													 results.Enqueue(new ReportEntry(name, inbound.Item1, inbound.Item2, outbound.Item1, outbound.Item2));
+				//												 }
+				//												 catch (Exception ex)
+				//												 {
+				//													 Console.WriteLine(string.Format(@"Error with: {0} {1}", name, ex.Message));
+				//												 }
+				//											 }
+				//										 }
+				//										 catch (Exception ex)
+				//										 {
+				//											 Console.WriteLine(ex);
+				//										 }
+				//										 finally
+				//										 {
+				//											 e.Signal();
+				//										 }
+				//									 }, ce);
+				//	}
+				//	ce.Wait();
+				//}
 
 				//// Parse the user entries
 				//var mailUserEntries = ReportGenerator.ParseMailUserEntries(document);

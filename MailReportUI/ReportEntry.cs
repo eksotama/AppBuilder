@@ -4,14 +4,35 @@ namespace MailReportUI
 {
 	public sealed class ReportEntry
 	{
-		public string Name { get; private set; }
-		public int Inbound { get; private set; }
-		public int InboundSize { get; private set; }
-		public int Outbound { get; private set; }
-		public int OutboundSize { get; private set; }
-		public object[] Values { get; private set; }
+		public string Name;
+		public long Inbound;
+		public long InboundSize;
+		public long Outbound;
+		public long OutboundSize;
 
-		public ReportEntry(string name, int inbound, int inboundSize, int outbound, int outboundSize)
+		public object[] Values
+		{
+			get
+			{
+				return new object[]
+				       {
+					       this.Name,
+					       this.Inbound,
+					       this.InboundSize,
+					       this.Outbound,
+					       this.OutboundSize
+				       };
+			}
+		}
+
+		public ReportEntry(string name)
+		{
+			if (name == null) throw new ArgumentNullException("name");
+
+			this.Name = name;
+		}
+
+		public ReportEntry(string name, long inbound, long inboundSize, long outbound, long outboundSize)
 		{
 			if (name == null) throw new ArgumentNullException("name");
 
@@ -20,14 +41,6 @@ namespace MailReportUI
 			this.InboundSize = inboundSize;
 			this.Outbound = outbound;
 			this.OutboundSize = outboundSize;
-			this.Values = new object[]
-			              {
-				              name,
-							  inbound,
-							  inboundSize,
-							  outbound,
-							  outboundSize
-			              };
 		}
 	}
 }
