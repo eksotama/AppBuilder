@@ -18,6 +18,28 @@ using OfficeOpenXml.Style;
 
 namespace Demo
 {
+	public static class QueryGenerator
+	{
+		private static readonly string Template = @"https://reports.office365.com/ecp/reportingwebservice/reporting.svc/MessageTrace?$filter=StartDate%20eq%20datetime'{0}'%20and%20EndDate%20eq%20datetime'{1}'%20&$select=SenderAddress,RecipientAddress,Size%20&$format=json";
+		private static readonly string OffsetTemplate = @"https://reports.office365.com/ecp/reportingwebservice/reporting.svc/MessageTrace?$filter=StartDate%20eq%20datetime'{0}'%20and%20EndDate%20eq%20datetime'{1}'%20&$select=SenderAddress,RecipientAddress,Size%20&$skiptoken={2}&$format=json";
+
+		public static IEnumerable<string> GenerateUrls(DateTime date)
+		{
+			var fromDate = date.ToString(@"s");
+			var toDate = date.AddDays(1).AddSeconds(-1).ToString(@"s");
+
+			yield return string.Format(Template, fromDate, toDate);
+
+			var offset = 1999;
+
+			while (true)
+			{
+				yield return string.Format(OffsetTemplate, fromDate, toDate, offset);
+				offset += 2000;
+			}
+		}
+	}
+
 	public class Program
 	{
 		private static int _index = -1;
@@ -36,10 +58,165 @@ namespace Demo
 			}
 		}
 
+		//private static void GenerateExcel(IEnumerable<ReportEntry> entries)
+		//{
+		//	var excelFile = new FileInfo(@"./MailReport.xlsx");
+		//	if (excelFile.Exists)
+		//	{
+		//		excelFile.Delete();
+		//	}
+		//	using (var package = new ExcelPackage(excelFile))
+		//	{
+		//		var worksheet = package.Workbook.Worksheets.Add(@"Mail Traffic");
+
+		//		var index = 1;
+		//		foreach (var name in new[] { @"Name", @"Inbound", @"Inbound Size", @"Outbound", @"Outbound Size" })
+		//		{
+		//			worksheet.Cells[1, index++].Value = name;
+		//		}
+
+		//		var rowIndex = 2;
+		//		foreach (var entry in entries)
+		//		{
+		//			var colIndex = 1;
+		//			foreach (var value in entry.Values)
+		//			{
+		//				worksheet.Cells[rowIndex, colIndex++].Value = value;
+		//			}
+		//			rowIndex++;
+		//		}
+
+		//		var headerFont = worksheet.Row(1).Style.Font;
+		//		headerFont.Bold = true;
+		//		headerFont.Size = 12;
+
+		//		for (var i = 1; i < index; i++)
+		//		{
+		//			worksheet.Column(i).AutoFit();
+		//		}
+
+		//		package.Save();
+		//	}
+		//}
+
 		static void Main(string[] args)
 		{
 			try
 			{
+				//var webLogin = new WebLogin(@"O365.Reporting.SA@CCHellenic.onmicrosoft.com", @"Kafo7315");
+				//var reportDate = DateTime.Today.AddDays(-1);
+
+				//var batchCounter = new ConcurrentQueue<int>();
+				//var reportData = new ConcurrentDictionary<string, ReportEntry>(8, 24 * 1024);
+
+				//var workers = 8;
+				//using (var bc = new BlockingCollection<string>(workers))
+				//{
+				//	using (var completedEvent = new CountdownEvent(workers))
+				//	{
+				//		for (var i = 0; i < workers; i++)
+				//		{
+				//			ThreadPool.QueueUserWorkItem(_ =>
+				//			{
+				//				var parameters = _ as object[];
+				//				var e = parameters[0] as CountdownEvent;
+				//				var urls = parameters[1] as BlockingCollection<string>;
+				//				var login = parameters[2] as WebLogin;
+				//				var lookup = parameters[3] as ConcurrentDictionary<string, ReportEntry>;
+				//				var counter = parameters[4] as ConcurrentQueue<int>;
+
+				//				try
+				//				{
+				//					var buffer = new byte[16 * 1024];
+				//					foreach (var url in urls.GetConsumingEnumerable())
+				//					{
+				//						foreach (var entry in ReportGenerator.Parse(WebQuery.DownloadContents(login, url, buffer)).Item1)
+				//						{
+				//							ReportEntry reportEntry;
+
+				//							var name = entry.Sender.ToLowerInvariant();
+				//							if (name.EndsWith(@"@cchellenic.com"))
+				//							{
+				//								if (!lookup.TryGetValue(name, out reportEntry))
+				//								{
+				//									reportEntry = new ReportEntry(name);
+				//									lookup.TryAdd(name, reportEntry);
+
+				//									// Query one more time to get the unique entry
+				//									lookup.TryGetValue(name, out reportEntry);
+				//								}
+				//								Interlocked.Increment(ref reportEntry.Outbound);
+				//								Interlocked.Add(ref reportEntry.OutboundSize, entry.Size);
+				//							}
+				//							name = entry.Recipient.ToLowerInvariant();
+				//							if (name.EndsWith(@"@cchellenic.com"))
+				//							{
+				//								if (!lookup.TryGetValue(name, out reportEntry))
+				//								{
+				//									reportEntry = new ReportEntry(name);
+				//									lookup.TryAdd(name, reportEntry);
+
+				//									// Query one more time to get the unique entry
+				//									lookup.TryGetValue(name, out reportEntry);
+				//								}
+				//								Interlocked.Increment(ref reportEntry.Inbound);
+				//								Interlocked.Add(ref reportEntry.InboundSize, entry.Size);
+				//							}
+				//						}
+
+				//						counter.Enqueue(0);
+				//						Console.WriteLine(counter.Count);
+
+				//						lock (lookup)
+				//						{
+				//							GenerateExcel(lookup.Values);
+				//						}
+				//					}
+				//				}
+				//				catch (Exception ex)
+				//				{
+				//					// TODO : Log exception
+				//					Debug.WriteLine(ex);
+				//				}
+				//				finally
+				//				{
+				//					e.Signal();
+				//					urls.CompleteAdding();
+				//				}
+				//			}, new object[] { completedEvent, bc, webLogin, reportData, batchCounter });
+				//		}
+				//		try
+				//		{
+				//			foreach (var url in QueryGenerator.GenerateUrls(reportDate))
+				//			{
+				//				// Check if all workers completed
+				//				if (completedEvent.IsSet)
+				//				{
+				//					break;
+				//				}
+				//				bc.Add(url);
+				//			}
+				//		}
+				//		catch (Exception ex)
+				//		{
+				//			// TODO : Log excetpion
+				//			Debug.WriteLine(ex);
+				//		}
+				//		finally
+				//		{
+				//			bc.CompleteAdding();
+				//		}
+				//		completedEvent.Wait();
+				//	}
+				//}
+
+				//GenerateExcel(reportData.Values);
+
+				//Console.WriteLine(@"Done");
+
+
+
+
 				//var filename = @"C:\temp\cchbcMails.txt";
 
 				//var hs = new HashSet<string>();

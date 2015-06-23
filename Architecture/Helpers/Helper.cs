@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using Architecture.Data;
-using Architecture.Objects;
+using Core.Data;
+using Core.Objects;
 
-namespace Architecture.Helpers
+namespace Core.Helpers
 {
 	public abstract class Helper<T> : IHelper<T> where T : IReadOnlyObject
 	{

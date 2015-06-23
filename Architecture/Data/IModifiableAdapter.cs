@@ -1,6 +1,6 @@
-using Architecture.Objects;
+using Core.Objects;
 
-namespace Architecture.Data
+namespace Core.Data
 {
 	public interface IModifiableAdapter<in T> where T : IModifiableObject
 	{

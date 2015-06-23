@@ -1,4 +1,4 @@
-namespace Architecture.Objects
+namespace Core.Objects
 {
 	public interface IModifiableObject
 	{

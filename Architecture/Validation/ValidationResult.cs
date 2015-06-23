@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Architecture.Validation
+namespace Core.Validation
 {
 	public sealed class ValidationResult
 	{

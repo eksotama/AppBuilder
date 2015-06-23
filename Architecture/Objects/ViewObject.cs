@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace Architecture.Objects
+namespace Core.Objects
 {
 	public abstract class ViewObject : INotifyPropertyChanged
 	{

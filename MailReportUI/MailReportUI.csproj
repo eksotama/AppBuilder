@@ -54,11 +54,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="ReportEntry.cs" />
     <Compile Include="ReportGenerator.cs" />
     <Compile Include="ReportGeneratorViewModel.cs" />
     <Compile Include="ReportSettings.cs" />
-    <Compile Include="WebLogin.cs" />
     <Compile Include="WebQuery.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -69,7 +67,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="BindableObject.cs" />
-    <Compile Include="DelegateCommand.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -108,6 +105,12 @@
     <Resource Include="Images\orange1.jpg" />
     <Resource Include="Images\orange2.jpg" />
     <Resource Include="Images\orange3.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Architecture\Core.csproj">
+      <Project>{A1874C4D-2E49-4034-B61C-5C38BCAF072D}</Project>
+      <Name>Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

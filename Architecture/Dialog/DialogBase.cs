@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Architecture.Dialog
+namespace Core.Dialog
 {
 	public abstract class DialogBase
 	{

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Architecture.Objects;
+using Core.Objects;
 
-namespace Architecture
+namespace Core
 {
 	public interface IManager<T> where T : IModifiableObject
 	{

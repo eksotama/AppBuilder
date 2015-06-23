@@ -1,51 +1,57 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Architecture.Data;
-using Architecture.Dialog;
-using Architecture.Objects;
-using Architecture.Validation;
-
-
+using System.Windows.Input;
+using Core;
+using Core.Data;
+using Core.Dialog;
+using Core.Objects;
+using Core.Validation;
 
 namespace Demo
 {
-	public abstract class BindableBase : INotifyPropertyChanged
-	{
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-		{
-			var handler = PropertyChanged;
-			if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
-		}
-
-		protected void SetField<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
-		{
-			if (EqualityComparer<T>.Default.Equals(field, value)) return;
-
-			field = value;
-			OnPropertyChanged(propertyName);
-		}
-	}
-
-	public sealed class LogMessageViewManager : BindableBase
+	public sealed class LogMessageViewManager : ViewObject
 	{
 		public LoginManager Manager { get; private set; }
+		public DialogBase Dialog { get; private set; }
 
+		private string _usernameValidationHint = string.Empty;
+		public string UsernameValidationHint
+		{
+			get { return _usernameValidationHint; }
+			set { this.SetField(ref _usernameValidationHint, value); }
+		}
+
+		private string _passwordValidationHint = string.Empty;
+		public string PasswordValidationHint
+		{
+			get { return _passwordValidationHint; }
+			set { this.SetField(ref _passwordValidationHint, value); }
+		}
+
+		public LoginViewItem ViewItem { get; private set; }
 		public ObservableCollection<LoginViewItem> ViewItems { get; private set; }
 
-		public LogMessageViewManager(LoginManager manager)
+		public ICommand AddCommand { get; private set; }
+
+		public LogMessageViewManager(LoginManager manager, DialogBase dialog)
 		{
 			if (manager == null) throw new ArgumentNullException("manager");
+			if (dialog == null) throw new ArgumentNullException("dialog");
 
 			this.Manager = manager;
+			this.Dialog = dialog;
+			this.ViewItem = new LoginViewItem(new Login());
 			this.ViewItems = new ObservableCollection<LoginViewItem>();
+			this.AddCommand = new DelegateCommand<LoginViewItem>(this.Add, this.CanExecuteAdd);
+		}
+
+		private bool CanExecuteAdd(LoginViewItem viewItem)
+		{
+			return !string.IsNullOrWhiteSpace(viewItem.Username) &&
+				   !string.IsNullOrWhiteSpace(viewItem.Password);
 		}
 
 		public void Load(DateTime date)
@@ -61,74 +67,74 @@ namespace Demo
 			// TODO : Sort & Filter
 		}
 
-		public async Task AddNew(LoginViewItem viewItem, DialogBase dialog)
+		public async Task Add(LoginViewItem viewItem)
 		{
 			if (viewItem == null) throw new ArgumentNullException("viewItem");
-			if (dialog == null) throw new ArgumentNullException("dialog");
 
-			// Apply validations about required fields, ranges & values
-			var validationResult = this.Manager.Validate(viewItem.Login);
-			//if (validationResult == ValidationResult.Success)
-			//{
-			//	// Apply business logic
-			//	var status = this.Manager.CanAddNew(viewItem.Login).Status;
-			//	switch (status)
-			//	{
-			//		case PermissionStatus.Allow:
-			//			// Add the log message
-			//			this.Add(viewItem);
-			//			break;
-			//		case PermissionStatus.Confirm:
-			//			// Confirm any user warnings
-			//			dialog.Message = this.Manager.Settings.ConfirmAddLongMessageMsg;
-			//			dialog.AcceptAction = () => this.Add(viewItem);
-			//			await dialog.ShowAsync();
-			//			break;
-			//		default:
-			//			throw new ArgumentOutOfRangeException();
-			//	}
-			//}
+			var login = viewItem.Login;
+			// Display validation to UI
+			this.UsernameValidationHint = Validator.CombineResults(this.Manager.ValidateUsername(login.Username));
+			this.PasswordValidationHint = Validator.CombineResults(this.Manager.ValidatePassword(login.Password));
+
+			// Apply validations about required fields, ranges & values			
+			var validationResults = this.Manager.Validate(login);
+			if (validationResults.Length == 0)
+			{
+				// Apply business logic
+				var permissionResult = this.Manager.CanAdd(login);
+				switch (permissionResult.Status)
+				{
+					case PermissionStatus.Allow:
+						this.AddValidated(viewItem);
+						break;
+					case PermissionStatus.Confirm:
+						// Confirm any user warnings
+						this.Dialog.Message = permissionResult.Message;
+						this.Dialog.AcceptAction = () => this.AddValidated(viewItem);
+						await this.Dialog.ShowAsync();
+						break;
+					case PermissionStatus.Deny:
+						await this.Dialog.DisplayAsync(permissionResult.Message);
+						break;
+					default:
+						throw new ArgumentOutOfRangeException();
+				}
+			}
 		}
 
-		public async Task MarkHandled(LoginViewItem viewItem, DialogBase dialog)
+		public async Task MarkInactive(LoginViewItem viewItem)
 		{
 			if (viewItem == null) throw new ArgumentNullException("viewItem");
-			if (dialog == null) throw new ArgumentNullException("dialog");
 
-			// Check if the item isn't already handled
-			//var isAlreadyHandled = viewItem.IsHandled;
-			//if (isAlreadyHandled)
-			//{
-			//	await dialog.DisplayAsync(this.Manager.Settings.ItemAlreadyHandledMsg);
-			//	return;
-			//}
+			// Apply business logic
+			var permissionResult = this.Manager.CanMarkInactive(viewItem.Login);
+			switch (permissionResult.Status)
+			{
+				case PermissionStatus.Allow:
+					// Request confirmation for marking the item as inactive
+					this.Dialog.Message = this.Manager.Settings.ConfirmMarkInactiveMsg;
+					this.Dialog.AcceptAction = () =>
+					{
+						// Mark the viewItem as Inactive
+						viewItem.IsActive = false;
 
-			//// Check if we have other message which is critical and it isn't handled
-			//var hasUnhandledCriticalMessage = this.Manager.HasUnhandledCriticalMessage(this.ViewItems.Select(v => v.Login), viewItem.Login);
-			//if (hasUnhandledCriticalMessage)
-			//{
-			//	await dialog.DisplayAsync(this.Manager.Settings.HasOtherUnhandledCriticalMessage);
-			//	return;
-			//}
-
-			//// Request confirmation for marking the item as handled
-			//dialog.Message = this.Manager.Settings.ConfirmMarkHandledMsg;
-			//dialog.AcceptAction = () =>
-			//					  {
-			//						  // Mark the viewItem as Handled
-			//						  viewItem.IsHandled = true;
-
-			//						  // Call the manager to update the message
-			//						  this.Manager.MarkHandled(viewItem.Login);
-			//					  };
-			//await dialog.ShowAsync();
-
+						// Call the manager to update the message
+						this.Manager.MarkInactive(viewItem.Login);
+					};
+					await this.Dialog.ShowAsync();
+					break;
+				case PermissionStatus.Deny:
+					await this.Dialog.DisplayAsync(permissionResult.Message);
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
 		}
 
-		private void Add(LoginViewItem viewItem)
+		private void AddValidated(LoginViewItem viewItem)
 		{
 			// Call the manager to add the new message
-			if (this.Manager.AddNew(viewItem.Login))
+			if (this.Manager.Add(viewItem.Login, true))
 			{
 				// Add the item to the list to the right place if sorter != null
 				this.ViewItems.Add(viewItem);
@@ -163,34 +169,54 @@ namespace Demo
 			_logins.AddRange(this.Adapter.GetAll(date));
 		}
 
+		public ValidationResult[] ValidateUsername(string username)
+		{
+			if (username == null) throw new ArgumentNullException("username");
+
+			return Validator.GetResults(
+				new[]
+				{
+					Validator.ValidateNotEmpty(username, this.Settings.UsernameRequiredMsg),
+					Validator.ValidateMaxLength(username, 16, this.Settings.UsernameTooLongMsg),
+				});
+		}
+
+		public ValidationResult[] ValidatePassword(string password)
+		{
+			if (password == null) throw new ArgumentNullException("password");
+
+			return Validator.GetResults(
+				new[]
+				{
+					Validator.ValidateNotEmpty(password, this.Settings.PasswordRequiredMsg),
+					Validator.ValidateLength(password, 8, 32, this.Settings.PasswordTooShortOrTooLongMsg),
+				});
+		}
+
 		public ValidationResult[] Validate(Login login)
 		{
 			if (login == null) throw new ArgumentNullException("login");
 
-			return Validator.GetResults(new[]
-			                            {
-				                            Validator.ValidateNotEmpty(login.Username, this.Settings.UsernameRequiredMsg),
-				                            Validator.ValidateNotEmpty(login.Password, this.Settings.PasswordRequiredMsg),
-											Validator.ValidateMaxLength(login.Username, 16, this.Settings.UsernameTooLongMsg),
-											Validator.ValidateMinLength(login.Password, 8, this.Settings.PasswordTooShortMsg),
-				                            Validator.ValidateMaxLength(login.Password, 32, this.Settings.PasswordTooLongMsg),
-			                            });
+			return this.ValidateUsername(login.Username)
+				.Concat(this.ValidatePassword(login.Password))
+				.ToArray();
 		}
 
-		public PermissionResult CanAddNew(Login login)
+		public PasswordStrength GetPasswordStrength(string password)
+		{
+			return PasswordValidator.GetPasswordStrength(password);
+		}
+
+		public PermissionResult CanAdd(Login login)
 		{
 			if (login == null) throw new ArgumentNullException("login");
 
 			// Trim the username
 			var username = (login.Username ?? string.Empty).Trim();
 
-			// Check for system usernames collision
-			foreach (var name in this.Settings.SystemUsernames)
+			if (this.IsSystem(login))
 			{
-				if (name.Equals(username, StringComparison.OrdinalIgnoreCase))
-				{
-					return PermissionResult.Deny(this.Settings.UsernameIsReservedForInternalUseMsg);
-				}
+				return PermissionResult.Deny(this.Settings.UsernameIsReservedForInternalUseMsg);
 			}
 
 			// Check for duplicate username
@@ -202,39 +228,57 @@ namespace Demo
 				}
 			}
 
-			var strenght = this.GetPasswordStrenght(login.Password);
-			switch (strenght)
+			// Check password strength
+			var strength = GetPasswordStrength(login.Password);
+			switch (strength)
 			{
-				case PasswordStrenght.Weak:
-					return PermissionResult.Deny(this.Settings.UsernameAlreadyTakenMsg);
-				case PasswordStrenght.Fair:
-					return PermissionResult.Confirm(this.Settings.UsernameAlreadyTakenMsg);
-				case PasswordStrenght.Good:
-				case PasswordStrenght.Strong:
+				case PasswordStrength.Weak:
+					return PermissionResult.Deny(this.Settings.PasswordTooWeakMsg);
+				case PasswordStrength.Medium:
+					return PermissionResult.Confirm(this.Settings.ConfirmPasswordMediumStrengthMsg);
+				case PasswordStrength.Good:
+				case PasswordStrength.Strong:
 					return PermissionResult.Allow;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
 		}
 
-		private PasswordStrenght GetPasswordStrenght(string password)
+		public PermissionResult CanMarkInactive(Login login)
 		{
-			throw new NotImplementedException();
+			if (login == null) throw new ArgumentNullException("login");
+
+			// Check if the item isn't already inactive
+			var isInactive = !login.IsActive;
+			if (isInactive)
+			{
+				return PermissionResult.Deny(this.Settings.LoginIsAlreadyInactiveMsg);
+			}
+
+			// Check if we have other message which is critical and it isn't handled
+			var isSystem = this.IsSystem(login);
+			if (isSystem)
+			{
+				return PermissionResult.Deny(this.Settings.LoginIsSystemMsg);
+			}
+
+			return PermissionResult.Allow;
 		}
 
-		public bool HasUnhandledCriticalMessage(IEnumerable<Login> messages, Login excludeMessage)
+		public bool Add(Login login, bool confirmed = false)
 		{
-			if (messages == null) throw new ArgumentNullException("messages");
-			if (excludeMessage == null) throw new ArgumentNullException("excludeMessage");
+			if (login == null) throw new ArgumentNullException("login");
 
-			foreach (var message in messages)
+			var validationResults = this.Validate(login);
+			if (validationResults.Length == 0)
 			{
-				if (message == excludeMessage)
+				var permissionResult = this.CanAdd(login);
+				if (permissionResult.Status == PermissionStatus.Allow ||
+					(permissionResult.Status == PermissionStatus.Confirm && confirmed))
 				{
-					continue;
-				}
-				if (this.IsUnhandledCriticalItem(message))
-				{
+					// Add the item to the db
+					this.Adapter.Insert(login);
+
 					return true;
 				}
 			}
@@ -242,67 +286,57 @@ namespace Demo
 			return false;
 		}
 
-		public bool IsUnhandledCriticalItem(Login login)
-		{
-			if (login == null) throw new ArgumentNullException("login");
-
-			//return !login.IsHandled && login.Username.IndexOf(@"Critical", StringComparison.OrdinalIgnoreCase) >= 0;
-			return false;
-		}
-
-		public bool AddNew(Login login, bool confirmed = false)
-		{
-			if (login == null) throw new ArgumentNullException("login");
-
-			//var validationResult = this.Validate(login);
-			//if (validationResult == ValidationResult.Success)
-			//{
-			//	var permissionResult = this.CanAddNew(login);
-
-			//	if (permissionResult.Status == PermissionStatus.Allow ||
-			//		(permissionResult.Status == PermissionStatus.Confirm && confirmed))
-			//	{
-			//		// Add the item to the db
-			//		this.Adapter.Insert(login);
-			//	}
-			//}
-
-			return false;
-		}
-
-		public void MarkHandled(Login login)
+		public bool MarkInactive(Login login)
 		{
 			if (login == null) throw new ArgumentNullException("login");
 
 			// Check if the item isn't already handled
-			//if (login.IsHandled)
-			//{
-			//	return;
-			//}
-			//// Check if we have other message which is critical and it isn't handled
-			//var hasUnhandledCriticalMessage = this.HasUnhandledCriticalMessage(_logins, login);
-			//if (hasUnhandledCriticalMessage)
-			//{
-			//	return;
-			//}
+			var permissionResult = this.CanMarkInactive(login);
+			if (permissionResult.Status == PermissionStatus.Allow)
+			{
+				// Mask the message as Inactive
+				login.IsActive = false;
 
-			//// Mask the message as handled
-			//login.IsHandled = true;
+				// Update the message in the db
+				this.Adapter.Update(login);
+			}
 
-			//// Update the message in the db
-			//this.Adapter.Update(login);
+			return false;
+		}
+
+		private bool IsSystem(Login login)
+		{
+			var username = (login.Username ?? string.Empty).Trim();
+
+			// Check for system usernames collision
+			foreach (var name in this.Settings.SystemUsernames)
+			{
+				if (name.Equals(username, StringComparison.OrdinalIgnoreCase))
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 
-	public enum PasswordStrenght
+	public static class PasswordValidator
+	{
+		public static PasswordStrength GetPasswordStrength(string password)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+	public enum PasswordStrength
 	{
 		Weak,
-		Fair,
+		Medium,
 		Good,
 		Strong
 	}
 
-	public sealed class LoginViewItem : BindableBase
+	public sealed class LoginViewItem : ViewObject
 	{
 		private readonly Login _login;
 
@@ -316,7 +350,7 @@ namespace Demo
 			get { return this.Login.Username; }
 			set
 			{
-				this.Login.Username = value;
+				this.Login.Username = (value ?? string.Empty).Trim();
 				this.OnPropertyChanged();
 			}
 		}
@@ -357,8 +391,12 @@ namespace Demo
 		public string UsernameIsReservedForInternalUseMsg { get; set; }
 		public string UsernameAlreadyTakenMsg { get; set; }
 		public string UsernameTooLongMsg { get; set; }
-		public string PasswordTooShortMsg { get; set; }
-		public string PasswordTooLongMsg { get; set; }
+		public string PasswordTooShortOrTooLongMsg { get; set; }
+		public string PasswordTooWeakMsg { get; set; }
+		public string ConfirmPasswordMediumStrengthMsg { get; set; }
+		public string LoginIsAlreadyInactiveMsg { get; set; }
+		public string LoginIsSystemMsg { get; set; }
+		public string ConfirmMarkInactiveMsg { get; set; }
 
 		public LoginSettings()
 		{

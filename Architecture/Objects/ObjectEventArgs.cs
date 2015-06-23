@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Architecture.Objects
+namespace Core.Objects
 {
 	public sealed class ObjectEventArgs<T> : EventArgs where T : IModifiableObject
 	{

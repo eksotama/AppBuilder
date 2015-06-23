@@ -5,6 +5,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
+using Core;
 using OfficeOpenXml;
 
 namespace MailReportUI
@@ -15,8 +17,8 @@ namespace MailReportUI
 		private static readonly object Sync = new object();
 		private static readonly object ProgressSync = new object();
 
-		private readonly List<ReportEntry> _results = new List<ReportEntry>();
-		private readonly Dictionary<string, ReportEntry> _reportEntries = new Dictionary<string, ReportEntry>(1024);
+		//private readonly List<ReportEntry> _results = new List<ReportEntry>();
+		//private readonly Dictionary<string, ReportEntry> _reportEntries = new Dictionary<string, ReportEntry>(1024);
 		private readonly Timer _timer;
 		private DateTime _startTime;
 
@@ -35,18 +37,18 @@ namespace MailReportUI
 			}
 		}
 
-		private static DateRange GetBatch(List<DateRange> values)
-		{
-			lock (Sync)
-			{
-				_index++;
-				if (_index >= 0 && _index < values.Count)
-				{
-					return values[_index];
-				}
-				return null;
-			}
-		}
+		//private static DateRange GetBatch(List<DateRange> values)
+		//{
+		//	lock (Sync)
+		//	{
+		//		_index++;
+		//		if (_index >= 0 && _index < values.Count)
+		//		{
+		//			return values[_index];
+		//		}
+		//		return null;
+		//	}
+		//}
 
 		public ReportSettings Settings { get; private set; }
 
@@ -187,36 +189,36 @@ namespace MailReportUI
 			return Task.FromResult(true);
 		}
 
-		private void ProcessMails(ReportSettings settings, List<DateRange> ranges)
-		{
-			this.MaxValue = ranges.Count;
-			_startTime = DateTime.Now;
-			_timer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(1));
+		//private void ProcessMails(ReportSettings settings, List<DateRange> ranges)
+		//{
+		//	this.MaxValue = ranges.Count;
+		//	_startTime = DateTime.Now;
+		//	_timer.Change(TimeSpan.Zero, TimeSpan.FromSeconds(1));
 
-			ThreadPool.QueueUserWorkItem(_ =>
-			{
-				using (var ce = new CountdownEvent(Math.Min(8, ranges.Count)))
-				{
-					for (var i = 0; i < ce.InitialCount; i++)
-					{
-						ThreadPool.QueueUserWorkItem(ProcessBatchRanges, new object[] { ce, settings, ranges });
-					}
-					ce.Wait();
-				}
+		//	ThreadPool.QueueUserWorkItem(_ =>
+		//	{
+		//		using (var ce = new CountdownEvent(Math.Min(8, ranges.Count)))
+		//		{
+		//			for (var i = 0; i < ce.InitialCount; i++)
+		//			{
+		//				ThreadPool.QueueUserWorkItem(ProcessBatchRanges, new object[] { ce, settings, ranges });
+		//			}
+		//			ce.Wait();
+		//		}
 
-				_timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+		//		_timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
-				this.CurrentValue = 0;
-				this.ProgressStep = @"Generating Excel file ...";
+		//		this.CurrentValue = 0;
+		//		this.ProgressStep = @"Generating Excel file ...";
 
-				// Sort
-				_results.Clear();
-				_results.AddRange(_reportEntries.Values);
-				_results.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
+		//		// Sort
+		//		_results.Clear();
+		//		_results.AddRange(_reportEntries.Values);
+		//		_results.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
 
-				GenerateExcel(_results);
-			});
-		}
+		//		//GenerateExcel(_results);
+		//	});
+		//}
 
 		private void ProcessMails(ReportSettings settings, string[] emails)
 		{
@@ -231,7 +233,7 @@ namespace MailReportUI
 				{
 					for (var i = 0; i < ce.InitialCount; i++)
 					{
-						ThreadPool.QueueUserWorkItem(ProcessBatchMails, new object[] { ce, settings, emails });
+						//ThreadPool.QueueUserWorkItem(ProcessBatchMails, new object[] { ce, settings, emails });
 					}
 					ce.Wait();
 				}
@@ -242,186 +244,123 @@ namespace MailReportUI
 				this.ProgressStep = @"Generating Excel file ...";
 
 				// Sort
-				_results.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
+				//_results.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
 
-				GenerateExcel(_results);
+				//GenerateExcel(_results);
 			});
 		}
 
-		private void ProcessBatchMails(object arg)
-		{
-			var pms = arg as object[];
-			var e = pms[0] as CountdownEvent;
-			var settings = pms[1] as ReportSettings;
-			var emails = pms[2] as string[];
-			try
-			{
-				var buffer = new byte[4 * 1024];
-				var login = new WebLogin(settings.Username,
-					settings.Password);
-				while (true)
-				{
-					var name = GetBatch(emails);
-					if (name == null)
-					{
-						break;
-					}
-					try
-					{
-						var inbound =
-							ReportGenerator.ParseJson(
-								WebQuery.DownloadContents(login,
-									WebQuery.GetMessageTraceRecipientQuery(
-										settings.Date, name), buffer));
-						var outbound =
-							ReportGenerator.ParseJson(
-								WebQuery.DownloadContents(login,
-									WebQuery.GetMessageTraceSenderQuery(
-										settings.Date, name), buffer));
+		//		private void ProcessBatchMails(object arg)
+		//		{
+		//			var pms = arg as object[];
+		//			var e = pms[0] as CountdownEvent;
+		//			var settings = pms[1] as ReportSettings;
+		//			var emails = pms[2] as string[];
+		//			try
+		//			{
+		//				var buffer = new byte[4 * 1024];
+		//				var login = new WebLogin(settings.Username, settings.Password);
+		//				while (true)
+		//				{
+		//					var name = GetBatch(emails);
+		//					if (name == null)
+		//					{
+		//						break;
+		//					}
+		//					try
+		//					{
+		//						var s = Stopwatch.StartNew();
+		//						//var tmp = WebQuery.DownloadContents(login, WebQuery.GetMessageTraceQuery(settings.Date, name), buffer);
 
-						lock (ProgressSync)
-						{
-							_results.Add(new ReportEntry(name, inbound.Item1,
-								inbound.Item2, outbound.Item1, outbound.Item2));
-							_processed++;
-							this.CurrentValue = _processed;
-						}
-					}
-					catch
-					{
-					}
-				}
-			}
-			catch
-			{
-			}
-			finally
-			{
-				e.Signal();
-			}
-		}
+		//						//var result = ReportGenerator.Parse(WebQuery.DownloadContents(login, WebQuery.GetMessageTraceQuery(settings.Date, name), buffer));
+		//						var result = ReportGenerator.Parse(WebQuery.DownloadContents(login,
+		//@"https://reports.office365.com/ecp/reportingwebservice/reporting.svc/MessageTrace?$filter=StartDate%20eq%20datetime'2015-06-18T00%3A00%3A00'%20and%20EndDate%20eq%20datetime'2015-06-18T23%3A59%3A59'%20&$select=SenderAddress,RecipientAddress,Size%20&$skiptoken=1999&$format=json", buffer));
 
-		private void ProcessBatchRanges(object arg)
-		{
-			var pms = arg as object[];
-			var e = pms[0] as CountdownEvent;
-			var settings = pms[1] as ReportSettings;
-			var dateRanges = pms[2] as List<DateRange>;
-			try
-			{
-				var buffer = new byte[4 * 1024];
-				var login = new WebLogin(settings.Username, settings.Password);
-				while (true)
-				{
-					var batch = GetBatch(dateRanges);
-					if (batch == null)
-					{
-						break;
-					}
-					try
-					{
-						var result = ReportGenerator.Parse(WebQuery.DownloadContents(login, WebQuery.GetQueryUrl(batch.StartTime, batch.EndTime), buffer));
+		//						var entries = result.Item1;
+		//						while (result.Item2 != string.Empty)
+		//						{
+		//							result = ReportGenerator.Parse(WebQuery.DownloadContents(login, result.Item2, buffer));
+		//							entries.AddRange(result.Item1);
 
-						var entries = result.Item1;
-						while (result.Item2 != string.Empty)
-						{
-							result = ReportGenerator.Parse(WebQuery.DownloadContents(login, result.Item2, buffer));
-							entries.AddRange(result.Item1);
-						}
+		//							Debug.WriteLine(s.ElapsedMilliseconds);
+		//						}
 
-						lock (ProgressSync)
-						{
-							foreach (var entry in entries)
-							{
-								ReportEntry reportEntry;
+		//						s.Stop();
+		//						Debug.WriteLine(s.ElapsedMilliseconds);
 
-								var name = entry.Sender.ToLowerInvariant();
-								if (name.EndsWith(@"@cchellenic.com"))
-								{
-									if (!_reportEntries.TryGetValue(name, out reportEntry))
-									{
-										reportEntry = new ReportEntry(name);
-										_reportEntries.Add(name, reportEntry);
-									}
-									reportEntry.Outbound++;
-									reportEntry.OutboundSize += entry.Size;
-								}
-								name = entry.Recipient.ToLowerInvariant();
-								if (name.EndsWith(@"@cchellenic.com"))
-								{
-									if (!_reportEntries.TryGetValue(name, out reportEntry))
-									{
-										reportEntry = new ReportEntry(name);
-										_reportEntries.Add(name, reportEntry);
-									}
-									reportEntry.Inbound++;
-									reportEntry.InboundSize += entry.Size;
-								}
-							}
-							_processed++;
-							this.CurrentValue = _processed;
-						}
-					}
-					catch
-					{
-					}
-				}
-			}
-			catch
-			{
-			}
-			finally
-			{
-				e.Signal();
-			}
-		}
+		//						var inbound = ReportGenerator.ParseJson(
+		//							WebQuery.DownloadContents(login, WebQuery.GetMessageTraceRecipientQuery(settings.Date, name), buffer));
+		//						var outbound = ReportGenerator.ParseJson(
+		//							WebQuery.DownloadContents(login, WebQuery.GetMessageTraceSenderQuery(settings.Date, name), buffer));
 
-		private void GenerateExcel(IEnumerable<ReportEntry> entries)
-		{
-			var excelFile = new FileInfo(@"./MailReport.xlsx");
-			if (excelFile.Exists)
-			{
-				excelFile.Delete();
-			}
-			using (var package = new ExcelPackage(excelFile))
-			{
-				var worksheet = package.Workbook.Worksheets.Add(@"Mail Traffic");
+		//						lock (ProgressSync)
+		//						{
+		//							_results.Add(new ReportEntry(name, inbound.Item1,
+		//								inbound.Item2, outbound.Item1, outbound.Item2));
+		//							_processed++;
+		//							this.CurrentValue = _processed;
+		//						}
+		//					}
+		//					catch
+		//					{
+		//					}
+		//				}
+		//			}
+		//			catch
+		//			{
+		//			}
+		//			finally
+		//			{
+		//				e.Signal();
+		//			}
+		//		}
 
-				var index = 1;
-				foreach (var name in new[] { @"Name", @"Inbound", @"Inbound Size", @"Outbound", @"Outbound Size" })
-				{
-					worksheet.Cells[1, index++].Value = name;
-				}
+		//private void GenerateExcel(IEnumerable<ReportEntry> entries)
+		//{
+		//	var excelFile = new FileInfo(@"./MailReport.xlsx");
+		//	if (excelFile.Exists)
+		//	{
+		//		excelFile.Delete();
+		//	}
+		//	using (var package = new ExcelPackage(excelFile))
+		//	{
+		//		var worksheet = package.Workbook.Worksheets.Add(@"Mail Traffic");
 
-				var rowIndex = 2;
-				foreach (var entry in entries)
-				{
-					var colIndex = 1;
-					foreach (var value in entry.Values)
-					{
-						worksheet.Cells[rowIndex, colIndex++].Value = value;
-					}
-					rowIndex++;
+		//		var index = 1;
+		//		foreach (var name in new[] { @"Name", @"Inbound", @"Inbound Size", @"Outbound", @"Outbound Size" })
+		//		{
+		//			worksheet.Cells[1, index++].Value = name;
+		//		}
 
-					this.CurrentValue += 1;
-				}
+		//		var rowIndex = 2;
+		//		foreach (var entry in entries)
+		//		{
+		//			var colIndex = 1;
+		//			foreach (var value in entry.Values)
+		//			{
+		//				worksheet.Cells[rowIndex, colIndex++].Value = value;
+		//			}
+		//			rowIndex++;
 
-				var headerFont = worksheet.Row(1).Style.Font;
-				headerFont.Bold = true;
-				headerFont.Size = 12;
+		//			this.CurrentValue += 1;
+		//		}
 
-				for (var i = 1; i < index; i++)
-				{
-					worksheet.Column(i).AutoFit();
-				}
+		//		var headerFont = worksheet.Row(1).Style.Font;
+		//		headerFont.Bold = true;
+		//		headerFont.Size = 12;
 
-				package.Save();
-			}
+		//		for (var i = 1; i < index; i++)
+		//		{
+		//			worksheet.Column(i).AutoFit();
+		//		}
 
-			this.ProgressStep = @"Complete";
-			this.IsIdle = true;
+		//		package.Save();
+		//	}
 
-			Process.Start(new ProcessStartInfo(@"excel", excelFile.FullName));
-		}
+		//	this.ProgressStep = @"Complete";
+		//	this.IsIdle = true;
+
+		//	Process.Start(new ProcessStartInfo(@"excel", excelFile.FullName));
+		//}
 	}
 }

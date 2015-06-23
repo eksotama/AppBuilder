@@ -78,9 +78,9 @@
       <Project>{4A075331-7B45-43AF-9A8C-4A24A869934E}</Project>
       <Name>AppBuilder</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Architecture\Architecture.csproj">
+    <ProjectReference Include="..\Architecture\Core.csproj">
       <Project>{A1874C4D-2E49-4034-B61C-5C38BCAF072D}</Project>
-      <Name>Architecture</Name>
+      <Name>Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\MailReportUI\MailReportUI.csproj">
       <Project>{A636CB11-35C9-40E4-A6BA-8403D5F02410}</Project>

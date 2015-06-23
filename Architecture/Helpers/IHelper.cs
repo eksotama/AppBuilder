@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
-using Architecture.Data;
-using Architecture.Objects;
+using Core.Data;
+using Core.Objects;
 
-namespace Architecture.Helpers
+namespace Core.Helpers
 {
 	public interface IHelper<T> where T : IReadOnlyObject
 	{

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using Architecture.Objects;
+using Core.Objects;
 
-namespace Architecture.Data
+namespace Core.Data
 {
 	public interface IReadOnlyAdapter<T> where T : IReadOnlyObject
 	{

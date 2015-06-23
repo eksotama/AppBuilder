@@ -1,15 +1,13 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace MailReportUI
+namespace Core
 {
 	public sealed class DelegateCommand<T> : ICommand where T : class
 	{
 		private readonly Func<T, bool> _canExecuteMethod;
 		private readonly Func<T, Task> _executeMethod;
-
-		#region Constructors
 
 		public DelegateCommand(Func<T, Task> executeMethod)
 			: this(executeMethod, null)
@@ -21,10 +19,6 @@ namespace MailReportUI
 			_executeMethod = executeMethod;
 			_canExecuteMethod = canExecuteMethod;
 		}
-
-		#endregion Constructors
-
-		#region ICommand Members
 
 		public event EventHandler CanExecuteChanged;
 
@@ -43,10 +37,6 @@ namespace MailReportUI
 			Execute((T)parameter);
 		}
 
-		#endregion ICommand Members
-
-		#region Public Methods
-
 		public bool CanExecute(T parameter)
 		{
 			return ((_canExecuteMethod == null) || _canExecuteMethod(parameter));
@@ -62,14 +52,10 @@ namespace MailReportUI
 
 		public void RaiseCanExecuteChanged()
 		{
-			OnCanExecuteChanged(EventArgs.Empty);
+			this.OnCanExecuteChanged(EventArgs.Empty);
 		}
 
-		#endregion Public Methods
-
-		#region Protected Methods
-
-		public void OnCanExecuteChanged(EventArgs e)
+		private void OnCanExecuteChanged(EventArgs e)
 		{
 			var handler = CanExecuteChanged;
 			if (handler != null)
@@ -77,7 +63,5 @@ namespace MailReportUI
 				handler(this, e);
 			}
 		}
-
-		#endregion Protected Methods
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Text;
 
-namespace Architecture.Validation
+namespace Core.Validation
 {
 	public static class Validator
 	{
@@ -21,7 +22,56 @@ namespace Architecture.Validation
 			if (results == null) throw new ArgumentNullException("results");
 			if (results.Length == 0) throw new ArgumentOutOfRangeException("results");
 
-			throw new NotImplementedException();
+			var totalViolations = 0;
+			foreach (var result in results)
+			{
+				if (result != ValidationResult.Success)
+				{
+					totalViolations++;
+				}
+			}
+			if (totalViolations > 0)
+			{
+				var violations = new ValidationResult[totalViolations];
+
+				var index = 0;
+				foreach (var result in results)
+				{
+					if (result != ValidationResult.Success)
+					{
+						violations[index++] = result;
+					}
+				}
+
+				return violations;
+			}
+			return new ValidationResult[0];
+		}
+
+		public static string CombineResults(ValidationResult[] results)
+		{
+			if (results == null) throw new ArgumentNullException("results");
+
+			if (results.Length == 0)
+			{
+				return string.Empty;
+			}
+
+			var buffer = new StringBuilder();
+
+			foreach (var result in results)
+			{
+				if (result != ValidationResult.Success)
+				{
+					if (buffer.Length > 0)
+					{
+						buffer.Append(@", ");
+					}
+					buffer.Append(result.ErrorMessage);
+				}
+			}
+
+			return buffer.ToString();
 		}
 
 		public static ValidationResult ValidateMinLength(string value, int minLength, string message)
@@ -51,7 +101,7 @@ namespace Architecture.Validation
 			{
 				return ValidationResult.Success;
 			}
-			return new ValidationResult(message);
+			return new ValidationResult(message + string.Format(@"({0}:{1})", min, max));
 		}
 	}
 }

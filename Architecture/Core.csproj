@@ -7,8 +7,8 @@
     <ProjectGuid>{A1874C4D-2E49-4034-B61C-5C38BCAF072D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Architecture</RootNamespace>
-    <AssemblyName>Architecture</AssemblyName>
+    <RootNamespace>Core</RootNamespace>
+    <AssemblyName>Core</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -35,6 +35,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DelegateCommand.cs" />
     <Compile Include="Dialog\DialogBase.cs" />
     <Compile Include="Objects\ObjectEventArgs.cs" />
     <Compile Include="Objects\ViewObject.cs" />
