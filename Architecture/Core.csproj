@@ -30,6 +30,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="PresentationCore" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
@@ -37,15 +38,16 @@
   <ItemGroup>
     <Compile Include="DelegateCommand.cs" />
     <Compile Include="Dialog\DialogBase.cs" />
+    <Compile Include="Dialog\DialogType.cs" />
     <Compile Include="Objects\ObjectEventArgs.cs" />
     <Compile Include="Objects\ViewObject.cs" />
     <Compile Include="Class1.cs" />
     <Compile Include="Helpers\Helper.cs" />
     <Compile Include="Helpers\IHelper.cs" />
-    <Compile Include="Data\IModifiableAdapter.cs" />
     <Compile Include="Objects\IModifiableObject.cs" />
     <Compile Include="Data\IReadOnlyAdapter.cs" />
     <Compile Include="Objects\IReadOnlyObject.cs" />
+    <Compile Include="LoginContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Validation\Validator.cs" />
     <Compile Include="Validation\ValidationResult.cs" />

@@ -103,6 +103,10 @@ namespace Demo
 		{
 			try
 			{
+				var path = Path.GetTempPath();
+				Console.WriteLine(path);
+				return;
+
 				//var webLogin = new WebLogin(@"O365.Reporting.SA@CCHellenic.onmicrosoft.com", @"Kafo7315");
 				//var reportDate = DateTime.Today.AddDays(-1);
 

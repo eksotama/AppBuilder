@@ -5,7 +5,6 @@ namespace Core.Dialog
 {
 	public abstract class DialogBase
 	{
-		public string Message { get; set; }
 		public Action AcceptAction { get; set; }
 		public Action DeclineAction { get; set; }
 		public Action CancelAction { get; set; }
@@ -14,7 +13,6 @@ namespace Core.Dialog
 
 		protected DialogBase()
 		{
-			this.Message = string.Empty;
 			this.AcceptAction = _emptyAction;
 			this.DeclineAction = _emptyAction;
 			this.CancelAction = _emptyAction;
@@ -24,11 +22,18 @@ namespace Core.Dialog
 		{
 			if (message == null) throw new ArgumentNullException("message");
 
-			this.Message = message;
-
-			return this.ShowAsync();
+			return this.ShowAsync(message, DialogType.None);
 		}
 
-		public abstract Task ShowAsync();
+		public Task ConfirmAsync(string message, DialogType? type = null)
+		{
+			if (message == null) throw new ArgumentNullException("message");
+
+			return this.ShowAsync(message, type ?? DialogType.YesNo);
+		}
+
+		public abstract Task ShowAsync(string message, DialogType? type = null);
+
+
 	}
 }

@@ -40,12 +40,12 @@ namespace Core.Validation
 		{
 			if (message == null) throw new ArgumentNullException("message");
 
-			throw new NotImplementedException();
+			return new PermissionResult(PermissionStatus.Deny, message);
 		}
 
 		public static PermissionResult Confirm(string message)
 		{
-			throw new NotImplementedException();
+			return new PermissionResult(PermissionStatus.Confirm, message);
 		}
 	}
 }

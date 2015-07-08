@@ -4,31 +4,55 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Core;
-using Core.Data;
+using System.Windows.Media;
 using Core.Dialog;
 using Core.Objects;
 using Core.Validation;
 
-namespace Demo
+namespace Core
 {
 	public sealed class LogMessageViewManager : ViewObject
 	{
 		public LoginManager Manager { get; private set; }
 		public DialogBase Dialog { get; private set; }
 
-		private string _usernameValidationHint = string.Empty;
-		public string UsernameValidationHint
+		private string _usernameValidationMsg = string.Empty;
+		public string UsernameValidationMsg
 		{
-			get { return _usernameValidationHint; }
-			set { this.SetField(ref _usernameValidationHint, value); }
+			get { return _usernameValidationMsg; }
+			set { this.SetField(ref _usernameValidationMsg, value); }
 		}
 
-		private string _passwordValidationHint = string.Empty;
-		public string PasswordValidationHint
+		private string _passwordValidationMsg = string.Empty;
+		public string PasswordValidationMsg
 		{
-			get { return _passwordValidationHint; }
-			set { this.SetField(ref _passwordValidationHint, value); }
+			get { return _passwordValidationMsg; }
+			set { this.SetField(ref _passwordValidationMsg, value); }
+		}
+
+		public string UsernameCaption { get { return this.Manager.Settings.UsernameCaption; } }
+		public string PasswordCaption { get { return this.Manager.Settings.PasswordCaption; } }
+		public string LoginCaption { get { return this.Manager.Settings.LoginCaption; } }
+
+		private string _strength;
+		public string Strength
+		{
+			get { return _strength; }
+			set { this.SetField(ref _strength, value); }
+		}
+
+		private Color _passwordColor;
+		public Color PasswordColor
+		{
+			get { return _passwordColor; }
+			set { this.SetField(ref _passwordColor, value); }
+		}
+
+		private double _passwordValue;
+		public double PasswordValue
+		{
+			get { return _passwordValue; }
+			set { this.SetField(ref _passwordValue, value); }
 		}
 
 		public LoginViewItem ViewItem { get; private set; }
@@ -43,15 +67,41 @@ namespace Demo
 
 			this.Manager = manager;
 			this.Dialog = dialog;
-			this.ViewItem = new LoginViewItem(new Login());
+			this.AddCommand = new DelegateCommand<LoginViewItem>(this.Add);
 			this.ViewItems = new ObservableCollection<LoginViewItem>();
-			this.AddCommand = new DelegateCommand<LoginViewItem>(this.Add, this.CanExecuteAdd);
+			this.ViewItem = new LoginViewItem(new Login());
+			this.ViewItem.PropertyChanged += (sender, arg) =>
+											 {
+												 var color = Colors.Black;
+												 var value = 0D;
+
+												 var password = this.ViewItem.Password ?? string.Empty;
+												 if (password != string.Empty)
+												 {
+													 value = this.Manager.GetPasswordStrengthValue(password);
+													 color = this.Manager.GetPasswordColor(value);
+												 }
+
+												 var strength = string.Empty;
+												 if (value > 0)
+												 {
+													 strength = value.ToString(@"F2");
+												 }
+												 this.Strength = strength;
+												 this.PasswordColor = color;
+												 this.PasswordValue = value;
+											 };
 		}
 
-		private bool CanExecuteAdd(LoginViewItem viewItem)
+		private Color GetColorValue(Color color)
 		{
-			return !string.IsNullOrWhiteSpace(viewItem.Username) &&
-				   !string.IsNullOrWhiteSpace(viewItem.Password);
+			//var r = color.R;
+			//var g = color.G;
+			//var b = color.B;
+			//var a = color.A;
+
+			//return a << 24 + r << 16 + g << 8 + b;
+			return color;
 		}
 
 		public void Load(DateTime date)
@@ -71,34 +121,42 @@ namespace Demo
 		{
 			if (viewItem == null) throw new ArgumentNullException("viewItem");
 
-			var login = viewItem.Login;
-			// Display validation to UI
-			this.UsernameValidationHint = Validator.CombineResults(this.Manager.ValidateUsername(login.Username));
-			this.PasswordValidationHint = Validator.CombineResults(this.Manager.ValidatePassword(login.Password));
+			viewItem = new LoginViewItem(new Login()) { Username = (viewItem.Username ?? string.Empty).Trim(), Password = viewItem.Password };
 
-			// Apply validations about required fields, ranges & values			
-			var validationResults = this.Manager.Validate(login);
-			if (validationResults.Length == 0)
+			try
 			{
-				// Apply business logic
-				var permissionResult = this.Manager.CanAdd(login);
-				switch (permissionResult.Status)
+				var login = viewItem.Login;
+				// Display validation to UI
+				this.UsernameValidationMsg = Validator.CombineResults(this.Manager.ValidateUsername(login.Username));
+				this.PasswordValidationMsg = Validator.CombineResults(this.Manager.ValidatePassword(login.Password));
+
+				// Apply validations about required fields, ranges & values			
+				var validationResults = this.Manager.Validate(login);
+				if (validationResults.Length == 0)
 				{
-					case PermissionStatus.Allow:
-						this.AddValidated(viewItem);
-						break;
-					case PermissionStatus.Confirm:
-						// Confirm any user warnings
-						this.Dialog.Message = permissionResult.Message;
-						this.Dialog.AcceptAction = () => this.AddValidated(viewItem);
-						await this.Dialog.ShowAsync();
-						break;
-					case PermissionStatus.Deny:
-						await this.Dialog.DisplayAsync(permissionResult.Message);
-						break;
-					default:
-						throw new ArgumentOutOfRangeException();
+					// Apply business logic
+					var permissionResult = this.Manager.CanAdd(login);
+					switch (permissionResult.Status)
+					{
+						case PermissionStatus.Allow:
+							this.AddValidated(viewItem);
+							break;
+						case PermissionStatus.Confirm:
+							// Confirm any user warnings
+							this.Dialog.AcceptAction = () => this.AddValidated(viewItem);
+							await this.Dialog.ConfirmAsync(permissionResult.Message);
+							break;
+						case PermissionStatus.Deny:
+							await this.Dialog.DisplayAsync(permissionResult.Message);
+							break;
+						default:
+							throw new ArgumentOutOfRangeException();
+					}
 				}
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
 			}
 		}
 
@@ -112,7 +170,6 @@ namespace Demo
 			{
 				case PermissionStatus.Allow:
 					// Request confirmation for marking the item as inactive
-					this.Dialog.Message = this.Manager.Settings.ConfirmMarkInactiveMsg;
 					this.Dialog.AcceptAction = () =>
 					{
 						// Mark the viewItem as Inactive
@@ -121,7 +178,7 @@ namespace Demo
 						// Call the manager to update the message
 						this.Manager.MarkInactive(viewItem.Login);
 					};
-					await this.Dialog.ShowAsync();
+					await this.Dialog.ShowAsync(this.Manager.Settings.ConfirmMarkInactiveMsg);
 					break;
 				case PermissionStatus.Deny:
 					await this.Dialog.DisplayAsync(permissionResult.Message);
@@ -146,13 +203,13 @@ namespace Demo
 	{
 		private readonly List<Login> _logins = new List<Login>();
 
-		public LoginAdapter Adapter { get; private set; }
-		public LoginSettings Settings { get; private set; }
-
 		public List<Login> Logins
 		{
 			get { return _logins; }
 		}
+
+		public LoginAdapter Adapter { get; private set; }
+		public LoginSettings Settings { get; private set; }
 
 		public LoginManager(LoginAdapter adapter, LoginSettings settings)
 		{
@@ -189,7 +246,8 @@ namespace Demo
 				new[]
 				{
 					Validator.ValidateNotEmpty(password, this.Settings.PasswordRequiredMsg),
-					Validator.ValidateLength(password, 8, 32, this.Settings.PasswordTooShortOrTooLongMsg),
+					Validator.ValidateMinLength(password, 8, this.Settings.PasswordTooShortMsg),
+					Validator.ValidateMaxLength(password, 32, this.Settings.PasswordTooLongMsg),
 				});
 		}
 
@@ -204,7 +262,21 @@ namespace Demo
 
 		public PasswordStrength GetPasswordStrength(string password)
 		{
+			if (password == null) throw new ArgumentNullException("password");
+
 			return PasswordValidator.GetPasswordStrength(password);
+		}
+
+		public double GetPasswordStrengthValue(string password)
+		{
+			if (password == null) throw new ArgumentNullException("password");
+
+			return PasswordValidator.GetPasswordStrengthValue(password);
+		}
+
+		public Color GetPasswordColor(double value)
+		{
+			return PasswordValidator.GetPasswordColor(value);
 		}
 
 		public PermissionResult CanAdd(Login login)
@@ -220,6 +292,7 @@ namespace Demo
 			}
 
 			// Check for duplicate username
+			// Check in the database ?!?? Do we need the field ?!
 			foreach (var current in _logins)
 			{
 				if (current.Username.Equals(username, StringComparison.OrdinalIgnoreCase))
@@ -279,6 +352,9 @@ namespace Demo
 					// Add the item to the db
 					this.Adapter.Insert(login);
 
+					// Add the item to the list
+					_logins.Add(login);
+
 					return true;
 				}
 			}
@@ -318,13 +394,73 @@ namespace Demo
 			}
 			return false;
 		}
+
+
 	}
 
 	public static class PasswordValidator
 	{
+		public static readonly Color[] PasswordColors =
+		{
+			Colors.Red, // Red,
+			Colors.OrangeRed, // RedOrange
+			Colors.Orange, // Orange,
+			Colors.Yellow, // Yellow
+			Colors.YellowGreen, // YellowGreen
+			Colors.Green, // Green
+			Colors.DarkGreen, // DarkGreen
+		};
+
 		public static PasswordStrength GetPasswordStrength(string password)
 		{
-			throw new NotImplementedException();
+			if (password == null) throw new ArgumentNullException("password");
+
+			if (password.Length < 10)
+			{
+				return PasswordStrength.Weak;
+			}
+			if (password.Length < 15)
+			{
+				return PasswordStrength.Medium;
+			}
+			return PasswordStrength.Good;
+		}
+
+		public static double GetPasswordStrengthValue(string password)
+		{
+			var value = 0;
+
+			if (password.Any(char.IsDigit))
+			{
+				value++;
+			}
+			if (password.Any(char.IsLower))
+			{
+				value++;
+			}
+			if (password.Any(char.IsUpper))
+			{
+				value++;
+			}
+			if (password.Any(char.IsSymbol))
+			{
+				value++;
+			}
+			if (password.Any(char.IsWhiteSpace))
+			{
+				value++;
+			}
+			if (password.Length > 12)
+			{
+				value++;
+			}
+
+			return ((double)value / PasswordColors.Length) * 100.0;
+		}
+
+		public static Color GetPasswordColor(double value)
+		{
+			return PasswordColors[((int)((value / 100.0) * PasswordColors.Length))];
 		}
 	}
 
@@ -350,7 +486,7 @@ namespace Demo
 			get { return this.Login.Username; }
 			set
 			{
-				this.Login.Username = (value ?? string.Empty).Trim();
+				this.Login.Username = value;
 				this.OnPropertyChanged();
 			}
 		}
@@ -391,22 +527,34 @@ namespace Demo
 		public string UsernameIsReservedForInternalUseMsg { get; set; }
 		public string UsernameAlreadyTakenMsg { get; set; }
 		public string UsernameTooLongMsg { get; set; }
-		public string PasswordTooShortOrTooLongMsg { get; set; }
 		public string PasswordTooWeakMsg { get; set; }
 		public string ConfirmPasswordMediumStrengthMsg { get; set; }
 		public string LoginIsAlreadyInactiveMsg { get; set; }
 		public string LoginIsSystemMsg { get; set; }
 		public string ConfirmMarkInactiveMsg { get; set; }
+		public string UsernameCaption { get; set; }
+		public string PasswordCaption { get; set; }
+		public string LoginCaption { get; set; }
+		public string PasswordTooShortMsg { get; set; }
+		public string PasswordTooLongMsg { get; set; }
 
 		public LoginSettings()
 		{
-			this.UsernameRequiredMsg = @"";
-			this.PasswordRequiredMsg = @"";
+			this.UsernameRequiredMsg = @"Username is required";
+			this.PasswordRequiredMsg = @"Password is required";
 			this.SystemUsernames = new[] { @"admin", @"administrator", @"system" };
+			this.UsernameCaption = @"Username";
+			this.PasswordCaption = @"Password";
+			this.PasswordCaption = @"Login";
+			this.PasswordTooShortMsg = @"Password is too short";
+			this.PasswordTooLongMsg = @"Password is too long";
+			this.PasswordTooWeakMsg = @"Password is too weak";
+			this.ConfirmPasswordMediumStrengthMsg = @"Password isn't strong enought. Do you want to continue with this password ?";
+			this.UsernameAlreadyTakenMsg = @"This username is already taken. Please choose another one.";
 		}
 	}
 
-	public sealed class LoginAdapter : IModifiableAdapter<Login>
+	public sealed class LoginAdapter
 	{
 		public List<Login> GetAll(DateTime date)
 		{
@@ -415,7 +563,7 @@ namespace Demo
 
 		public void Insert(Login item)
 		{
-			throw new NotImplementedException();
+			Console.WriteLine(@"Insert data into db.");
 		}
 
 		public void Update(Login item)
