@@ -394,8 +394,6 @@ namespace Core
 			}
 			return false;
 		}
-
-
 	}
 
 	public static class PasswordValidator
